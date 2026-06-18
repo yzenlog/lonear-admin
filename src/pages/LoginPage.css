@@ -50,19 +50,18 @@
 
 .login-logo {
   display: grid;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   place-items: center;
-  overflow: hidden;
-  border-radius: 7px;
-  background: #fff;
+  border-radius: 8px;
+  background: transparent;
 }
 
 .login-logo img {
   display: block;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   object-fit: contain;
 }
 

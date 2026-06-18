@@ -137,19 +137,18 @@ button {
 
 .ws-logo {
   display: grid;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   flex-shrink: 0;
   place-items: center;
-  overflow: hidden;
-  border-radius: 6px;
-  background: #fff;
+  border-radius: 8px;
+  background: transparent;
 }
 
 .ws-logo img {
   display: block;
-  width: 24px;
-  height: 24px;
+  width: 30px;
+  height: 30px;
   object-fit: contain;
 }
 
@@ -227,12 +226,12 @@ button {
 
 .ws-menu-logo {
   display: grid;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   flex-shrink: 0;
   place-items: center;
-  border-radius: 6px;
-  background: #fff;
+  border-radius: 7px;
+  background: transparent;
   color: var(--text-muted);
   font-size: 11px;
   font-weight: 700;
@@ -240,8 +239,8 @@ button {
 
 .ws-menu-logo img {
   display: block;
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   object-fit: contain;
 }
 
