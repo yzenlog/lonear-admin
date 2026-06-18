@@ -1,0 +1,19 @@
+{
+  "name": "Admin Linear Demo",
+  "short_name": "Admin",
+  "description": "Linear style admin management shell built with React.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#fbfbfd",
+  "theme_color": "#1066cc",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
