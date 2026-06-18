@@ -1,75 +1,129 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { CSSProperties, FormEvent } from "react";
 import {
   Bell,
+  Check,
   ChevronDown,
   Command,
   Download,
   Eye,
   ListFilter,
+  LogOut,
   Menu,
   MoreHorizontal,
-  PanelTop,
   Plus,
   Search,
-  Shield,
-  SlidersHorizontal,
-  UserPlus,
+  Settings,
+  UserRound,
   X,
-  FileText,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import {
-  auditLogs,
-  integrations,
-  issues,
-  members,
-  metrics,
-  moduleMeta,
-  roles,
-  sections,
-  statusMeta,
-} from "./data";
-import type { Issue, IssueStatus, ModuleId, NavItem, NavSection, Team } from "./data";
+import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { contentHealth, metrics, moduleMeta, moduleRecords, moduleRoutes, sections, workbenchTasks } from "./data";
+import type { ManagementRecord, ModuleId, NavGroup, NavItem, NavSection, StatusTone } from "./data";
+import LoginPage from "./pages/LoginPage";
 
-type IssueTab = "all" | IssueStatus;
+const AUTH_STORAGE_KEY = "admin-linear-demo-auth";
+const DASHBOARD_NAV_KEY = "section:dashboard:dashboard:工作台";
+const moduleRouteEntries = Object.entries(moduleRoutes) as Array<[ModuleId, string]>;
 
-const issueTabs: Array<{ id: IssueTab; label: string }> = [
-  { id: "all", label: "全部" },
-  { id: "progress", label: "进行中" },
-  { id: "todo", label: "待办" },
-  { id: "done", label: "已完成" },
-];
+function getInitialAuthState() {
+  return (
+    window.localStorage.getItem(AUTH_STORAGE_KEY) === "true" ||
+    window.sessionStorage.getItem(AUTH_STORAGE_KEY) === "true"
+  );
+}
 
-const issueModules = new Set<ModuleId>([
-  "inbox",
-  "my-work",
-  "projects",
-  "completed",
-  "roadmap",
-  "cycles",
-  "issues",
-  "in-progress",
-  "todo",
-]);
+function normalizePathname(pathname: string) {
+  const normalizedPathname = pathname.replace(/\/+$/, "");
+  return normalizedPathname || "/";
+}
+
+function getModuleIdFromPathname(pathname: string) {
+  const normalizedPathname = normalizePathname(pathname);
+  return moduleRouteEntries.find(([, routePath]) => routePath === normalizedPathname)?.[0];
+}
+
+function getNavKeyForModule(moduleId: ModuleId) {
+  for (const section of sections) {
+    const sectionItem = section.items?.find((item) => item.id === moduleId);
+
+    if (sectionItem) {
+      return `section:${section.id}:${sectionItem.id}:${sectionItem.label}`;
+    }
+
+    for (const group of section.groups ?? []) {
+      const groupItem = group.items.find((item) => item.id === moduleId);
+
+      if (groupItem) {
+        return `group:${section.id}:${group.id}:${groupItem.id}:${groupItem.label}`;
+      }
+    }
+  }
+
+  return DASHBOARD_NAV_KEY;
+}
+
+function getProtectedLoginPath(pathname: string) {
+  const redirectPath = normalizePathname(pathname);
+
+  if (!getModuleIdFromPathname(redirectPath)) {
+    return "/login";
+  }
+
+  return `/login?redirect=${encodeURIComponent(redirectPath)}`;
+}
+
+function getLoginRedirectPath(state: unknown, search: string) {
+  const redirectParam = new URLSearchParams(search).get("redirect");
+
+  if (redirectParam && getModuleIdFromPathname(redirectParam)) {
+    return normalizePathname(redirectParam);
+  }
+
+  if (state && typeof state === "object" && "from" in state) {
+    const from = (state as { from?: unknown }).from;
+
+    if (typeof from === "string" && getModuleIdFromPathname(from)) {
+      return normalizePathname(from);
+    }
+  }
+
+  return moduleRoutes.dashboard;
+}
 
 function App() {
-  const [activeModule, setActiveModule] = useState<ModuleId>("issues");
-  const [activeNavKey, setActiveNavKey] = useState("team:engineering:issues:全部事项");
-  const [activeTab, setActiveTab] = useState<IssueTab>("all");
+  const navigate = useNavigate();
+  const location = useLocation();
+  const activeModule = getModuleIdFromPathname(location.pathname) ?? "dashboard";
+  const [isAuthenticated, setIsAuthenticated] = useState(getInitialAuthState);
+  const [loginEmail, setLoginEmail] = useState("admin@acme.local");
+  const [loginPassword, setLoginPassword] = useState("admin123");
+  const [rememberSession, setRememberSession] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+  const [loginStatus, setLoginStatus] = useState<"idle" | "loading">("idle");
+  const [loginError, setLoginError] = useState("");
+  const [loginMessage, setLoginMessage] = useState("企业账号受保护，登录后进入当前工作区。");
   const [query, setQuery] = useState("");
-  const [selectedIssue, setSelectedIssue] = useState("ENG-142");
-  const [workspaceOpen, setWorkspaceOpen] = useState(true);
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
-    navigation: false,
-    workspace: false,
-    teams: false,
-    admin: false,
+    system: false,
+    content: false,
+    message: false,
+    audit: false,
   });
-  const [collapsedTeams, setCollapsedTeams] = useState<Record<string, boolean>>({
-    marketing: true,
+  const [collapsedGroups, setCollapsedGroups] = useState<Record<string, boolean>>({
+    global: false,
   });
   const [notice, setNotice] = useState("工作区已同步");
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [openTabs, setOpenTabs] = useState<ModuleId[]>(() =>
+    activeModule === "dashboard" ? ["dashboard"] : ["dashboard", activeModule],
+  );
   const searchRef = useRef<HTMLInputElement>(null);
+  const workspaceMenuRef = useRef<HTMLDivElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const activeNavKey = useMemo(() => getNavKeyForModule(activeModule), [activeModule]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -84,110 +138,340 @@ function App() {
   }, []);
 
   useEffect(() => {
-    if (activeModule === "in-progress") {
-      setActiveTab("progress");
-    } else if (activeModule === "todo") {
-      setActiveTab("todo");
-    } else if (activeModule === "completed") {
-      setActiveTab("done");
-    } else if (!issueModules.has(activeModule)) {
-      setActiveTab("all");
-    }
+    setOpenTabs((currentTabs) => (currentTabs.includes(activeModule) ? currentTabs : [...currentTabs, activeModule]));
   }, [activeModule]);
 
-  const filteredIssues = useMemo(() => {
+  useEffect(() => {
+    if (!workspaceOpen) {
+      return;
+    }
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!workspaceMenuRef.current?.contains(event.target as Node)) {
+        setWorkspaceOpen(false);
+      }
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setWorkspaceOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [workspaceOpen]);
+
+  useEffect(() => {
+    if (!userMenuOpen) {
+      return;
+    }
+
+    const onPointerDown = (event: PointerEvent) => {
+      if (!userMenuRef.current?.contains(event.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    };
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setUserMenuOpen(false);
+      }
+    };
+
+    window.addEventListener("pointerdown", onPointerDown);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [userMenuOpen]);
+
+  const filteredRecords = useMemo(() => {
+    if (activeModule === "dashboard") {
+      return [];
+    }
+
     const normalized = query.trim().toLowerCase();
+    const records = moduleRecords[activeModule];
 
-    return issues.filter((issue) => {
-      const tabMatch = activeTab === "all" || issue.status === activeTab;
-      const queryMatch =
-        !normalized ||
-        [issue.id, issue.title, issue.label, issue.assignee].some((value) =>
-          value.toLowerCase().includes(normalized),
-        );
+    if (!normalized) {
+      return records;
+    }
 
-      return tabMatch && queryMatch;
-    });
-  }, [activeTab, query]);
+    return records.filter((record) =>
+      [record.title, record.description, record.meta, record.owner, record.status].some((value) =>
+        value.toLowerCase().includes(normalized),
+      ),
+    );
+  }, [activeModule, query]);
 
   const meta = moduleMeta[activeModule];
-  const showsIssues = issueModules.has(activeModule);
+
+  function handleLogin(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const normalizedEmail = loginEmail.trim();
+    const hasValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
+    const hasValidPassword = loginPassword.trim().length >= 6;
+
+    if (!hasValidEmail || !hasValidPassword) {
+      setLoginError("请输入有效邮箱和至少 6 位密码");
+      setLoginMessage("");
+      return;
+    }
+
+    setLoginError("");
+    setLoginStatus("loading");
+
+    window.setTimeout(() => {
+      window.localStorage.removeItem(AUTH_STORAGE_KEY);
+      window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
+      const authStorage = rememberSession ? window.localStorage : window.sessionStorage;
+
+      authStorage.setItem(AUTH_STORAGE_KEY, "true");
+      setLoginStatus("idle");
+      setIsAuthenticated(true);
+      navigate(getLoginRedirectPath(location.state, location.search), { replace: true });
+      setNotice(rememberSession ? "登录成功，工作区已同步" : "本次会话已登录");
+    }, 520);
+  }
+
+  function updateLoginEmail(value: string) {
+    setLoginEmail(value);
+    setLoginError("");
+    setLoginMessage("企业账号受保护，登录后进入当前工作区。");
+  }
+
+  function updateLoginPassword(value: string) {
+    setLoginPassword(value);
+    setLoginError("");
+    setLoginMessage("企业账号受保护，登录后进入当前工作区。");
+  }
+
+  function handleRecovery() {
+    setLoginError("");
+    setLoginMessage("请联系系统管理员重置密码");
+  }
 
   function toggleSection(id: string) {
     setCollapsedSections((current) => ({ ...current, [id]: !current[id] }));
   }
 
-  function toggleTeam(id: string) {
-    setCollapsedTeams((current) => ({ ...current, [id]: !current[id] }));
+  function toggleGroup(id: string) {
+    setCollapsedGroups((current) => ({ ...current, [id]: !current[id] }));
   }
 
   function activateModule(id: ModuleId, navKey: string) {
-    setActiveModule(id);
-    setActiveNavKey(navKey);
+    navigate(moduleRoutes[id]);
     setNotice(`${moduleMeta[id].title} 已打开`);
   }
 
-  function handleCreate() {
-    const label = showsIssues ? "新事项" : `${meta.title}记录`;
-    setNotice(`${label} 创建入口已就绪`);
+  function selectTab(id: ModuleId) {
+    navigate(moduleRoutes[id]);
+    setNotice(`${moduleMeta[id].title} 已打开`);
   }
 
-  return (
+  function closeTab(id: ModuleId) {
+    if (id === "dashboard") {
+      return;
+    }
+
+    const nextTabs = openTabs.filter((tabId) => tabId !== id);
+    setOpenTabs(nextTabs);
+
+    if (id === activeModule) {
+      const closedIndex = openTabs.indexOf(id);
+      const nextIndex = Math.max(0, Math.min(closedIndex, nextTabs.length - 1));
+      const nextModule = nextTabs[nextIndex] ?? "dashboard";
+
+      selectTab(nextModule);
+    }
+  }
+
+  function handleCreate() {
+    if (activeModule === "dashboard") {
+      setNotice("工作台数据已刷新");
+      return;
+    }
+
+    setNotice(`${meta.action}入口已就绪`);
+  }
+
+  function handleSectionQuickAdd(section: NavSection) {
+    setNotice(`${section.title}快捷新增入口已打开`);
+  }
+
+  function handleWorkspaceSelect(name: string) {
+    setNotice(`${name} 工作区已切换`);
+    setWorkspaceOpen(false);
+  }
+
+  function handleWorkspaceManage() {
+    setNotice("工作区管理已打开");
+    setWorkspaceOpen(false);
+  }
+
+  function handleUserMenuAction(label: string) {
+    setNotice(`${label}已打开`);
+    setUserMenuOpen(false);
+  }
+
+  function handleLogout() {
+    window.localStorage.removeItem(AUTH_STORAGE_KEY);
+    window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
+    setIsAuthenticated(false);
+    setUserMenuOpen(false);
+    navigate("/login", { replace: true });
+  }
+
+  const loginPage = (
+    <LoginPage
+      email={loginEmail}
+      password={loginPassword}
+      rememberSession={rememberSession}
+      showPassword={showPassword}
+      status={loginStatus}
+      error={loginError}
+      message={loginMessage}
+      onEmailChange={updateLoginEmail}
+      onPasswordChange={updateLoginPassword}
+      onRememberChange={(checked) => setRememberSession(checked)}
+      onTogglePassword={() => setShowPassword((visible) => !visible)}
+      onRecoveryClick={handleRecovery}
+      onSubmit={handleLogin}
+    />
+  );
+
+  const workbenchPage = (
     <div className="app-shell">
       <aside className="sidebar" aria-label="主导航">
-        <button
-          className={`workspace ${workspaceOpen ? "open" : ""}`}
-          onClick={() => setWorkspaceOpen((open) => !open)}
-          type="button"
-        >
-          <span className="ws-logo" aria-hidden="true">
-            A
-          </span>
-          <span className="ws-name">Acme Inc</span>
-          <ChevronDown className="ws-chevron" size={13} strokeWidth={2.2} />
-        </button>
+        <div className="sidebar-scroll">
+          <div className="workspace-switcher" ref={workspaceMenuRef}>
+            <button
+              className={`workspace ${workspaceOpen ? "open" : ""}`}
+              onClick={() => {
+                setWorkspaceOpen((open) => !open);
+                setUserMenuOpen(false);
+              }}
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={workspaceOpen}
+            >
+              <span className="ws-logo" aria-hidden="true">
+                <img src="/logo.png" alt="" />
+              </span>
+              <span className="ws-name">Acme Admin</span>
+              <ChevronDown className="ws-chevron" size={13} strokeWidth={2.2} />
+            </button>
 
-        <label className="search-box">
-          <Search size={15} strokeWidth={2.1} />
-          <input
-            ref={searchRef}
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="搜索..."
-            aria-label="搜索模块或事项"
-          />
-          <kbd>
-            <Command size={10} strokeWidth={2.4} />K
-          </kbd>
-        </label>
+            {workspaceOpen ? (
+              <div className="workspace-menu-popover" role="menu" aria-label="工作区菜单">
+                <button className="active" type="button" role="menuitem" onClick={() => handleWorkspaceSelect("Acme Admin")}>
+                  <span className="ws-menu-logo">
+                    <img src="/logo.png" alt="" />
+                  </span>
+                  <span>
+                    <strong>Acme Admin</strong>
+                    <small>当前工作区</small>
+                  </span>
+                  <Check size={14} strokeWidth={2.2} />
+                </button>
+                <button type="button" role="menuitem" onClick={() => handleWorkspaceSelect("运营后台")}>
+                  <span className="ws-menu-logo muted">运</span>
+                  <span>
+                    <strong>运营后台</strong>
+                    <small>内容与消息</small>
+                  </span>
+                </button>
+                <button type="button" role="menuitem" onClick={handleWorkspaceManage}>
+                  <Plus size={14} strokeWidth={2.2} />
+                  <span>
+                    <strong>管理工作区</strong>
+                    <small>切换、创建或配置</small>
+                  </span>
+                </button>
+              </div>
+            ) : null}
+          </div>
 
-        <nav className="nav-stack">
-          {sections.map((section) => (
-            <SidebarSection
-              key={section.id}
-              section={section}
-              activeModule={activeModule}
-              activeNavKey={activeNavKey}
-              collapsed={Boolean(collapsedSections[section.id])}
-              collapsedTeams={collapsedTeams}
-              onToggleSection={toggleSection}
-              onToggleTeam={toggleTeam}
-              onActivate={activateModule}
+          <label className="search-box">
+            <Search size={15} strokeWidth={2.1} />
+            <input
+              ref={searchRef}
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="搜索模块或记录..."
+              aria-label="搜索模块或记录"
             />
-          ))}
-        </nav>
+            <kbd>
+              <Command size={10} strokeWidth={2.4} />K
+            </kbd>
+          </label>
 
-        <button className="sidebar-footer" type="button" onClick={() => setNotice("个人菜单已打开")}>
-          <Avatar initials="ZY" color="#1066cc" />
-          <span className="user-info">
-            <span className="user-name">Zenlon Young</span>
-            <span className="user-status">
-              <span className="status-dot" />
-              在线
+          <nav className="nav-stack">
+            {sections.map((section) => (
+              <SidebarSection
+                key={section.id}
+                section={section}
+                activeNavKey={activeNavKey}
+                collapsed={Boolean(collapsedSections[section.id])}
+                collapsedGroups={collapsedGroups}
+                onToggleSection={toggleSection}
+                onToggleGroup={toggleGroup}
+                onQuickAdd={handleSectionQuickAdd}
+                onActivate={activateModule}
+              />
+            ))}
+          </nav>
+        </div>
+
+        <div className="sidebar-footer" ref={userMenuRef}>
+          <button className="sidebar-user" type="button" onClick={() => handleUserMenuAction("个人资料")}>
+            <Avatar initials="ZY" color="#1066cc" />
+            <span className="user-info">
+              <span className="user-name">Zenlon Young</span>
+              <span className="user-status">
+                <span className="status-dot" />
+                在线
+              </span>
             </span>
-          </span>
-          <MoreHorizontal size={16} strokeWidth={2.1} />
-        </button>
+          </button>
+          <button
+            className={`footer-menu-btn ${userMenuOpen ? "active" : ""}`}
+            type="button"
+            aria-label="打开个人菜单"
+            aria-haspopup="menu"
+            aria-expanded={userMenuOpen}
+            onClick={() => {
+              setUserMenuOpen((open) => !open);
+              setWorkspaceOpen(false);
+            }}
+          >
+            <MoreHorizontal size={16} strokeWidth={2.1} />
+          </button>
+
+          {userMenuOpen ? (
+            <div className="user-menu-popover" role="menu" aria-label="个人菜单">
+              <button type="button" role="menuitem" onClick={() => handleUserMenuAction("个人资料")}>
+                <UserRound size={14} strokeWidth={2.1} />
+                个人资料
+              </button>
+              <button type="button" role="menuitem" onClick={() => handleUserMenuAction("账号设置")}>
+                <Settings size={14} strokeWidth={2.1} />
+                账号设置
+              </button>
+              <button className="danger" type="button" role="menuitem" onClick={handleLogout}>
+                <LogOut size={14} strokeWidth={2.1} />
+                退出登录
+              </button>
+            </div>
+          ) : null}
+        </div>
       </aside>
 
       <main className="main-panel">
@@ -210,57 +494,133 @@ function App() {
             </button>
             <button className="btn-primary" type="button" onClick={handleCreate}>
               <Plus size={14} strokeWidth={2.4} />
-              新建
+              {activeModule === "dashboard" ? "刷新" : "新建"}
             </button>
           </div>
         </header>
 
-        {showsIssues ? (
-          <IssueWorkspace
-            issues={filteredIssues}
-            activeTab={activeTab}
-            selectedIssue={selectedIssue}
-            onSelectTab={setActiveTab}
-            onSelectIssue={setSelectedIssue}
-          />
-        ) : (
-          <AdminWorkspace activeModule={activeModule} />
-        )}
+        <PageTabs tabs={openTabs} activeModule={activeModule} onSelect={selectTab} onClose={closeTab} />
+
+        <AdminWorkspace activeModule={activeModule} records={filteredRecords} query={query} />
       </main>
+    </div>
+  );
+
+  const loginRedirect = <Navigate to={getProtectedLoginPath(location.pathname)} state={{ from: location.pathname }} replace />;
+
+  return (
+    <Routes>
+      <Route path="/" element={<Navigate to={isAuthenticated ? moduleRoutes.dashboard : "/login"} replace />} />
+      <Route
+        path="/login"
+        element={
+          isAuthenticated ? <Navigate to={getLoginRedirectPath(location.state, location.search)} replace /> : loginPage
+        }
+      />
+      {moduleRouteEntries.map(([id, routePath]) => (
+        <Route key={id} path={routePath} element={isAuthenticated ? workbenchPage : loginRedirect} />
+      ))}
+      <Route path="*" element={<Navigate to={isAuthenticated ? moduleRoutes.dashboard : "/login"} replace />} />
+    </Routes>
+  );
+}
+
+function PageTabs({
+  tabs,
+  activeModule,
+  onSelect,
+  onClose,
+}: {
+  tabs: ModuleId[];
+  activeModule: ModuleId;
+  onSelect: (id: ModuleId) => void;
+  onClose: (id: ModuleId) => void;
+}) {
+  return (
+    <div className="tabs page-tabs" role="tablist" aria-label="已打开页面">
+      {tabs.map((id) => {
+        const meta = moduleMeta[id];
+        const Icon = meta.icon;
+        const active = id === activeModule;
+
+        return (
+          <div className={`tab-item ${active ? "active" : ""}`} key={id}>
+            <button className="tab" type="button" role="tab" aria-selected={active} onClick={() => onSelect(id)}>
+              <Icon size={13} strokeWidth={2.1} />
+              <span>{meta.title}</span>
+            </button>
+            {id === "dashboard" ? null : (
+              <button className="tab-close" type="button" aria-label={`关闭${meta.title}`} onClick={() => onClose(id)}>
+                <X size={12} strokeWidth={2.1} />
+              </button>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 function SidebarSection({
   section,
-  activeModule,
   activeNavKey,
   collapsed,
-  collapsedTeams,
+  collapsedGroups,
   onToggleSection,
-  onToggleTeam,
+  onToggleGroup,
+  onQuickAdd,
   onActivate,
 }: {
   section: NavSection;
-  activeModule: ModuleId;
   activeNavKey: string;
   collapsed: boolean;
-  collapsedTeams: Record<string, boolean>;
+  collapsedGroups: Record<string, boolean>;
   onToggleSection: (id: string) => void;
-  onToggleTeam: (id: string) => void;
+  onToggleGroup: (id: string) => void;
+  onQuickAdd: (section: NavSection) => void;
   onActivate: (id: ModuleId, navKey: string) => void;
 }) {
+  if (section.standalone) {
+    return (
+      <section className="nav-section standalone">
+        <div className="section-body">
+          {section.items?.map((item) => (
+            <SidebarItem
+              key={`${section.id}-${item.id}-${item.label}`}
+              item={item}
+              navKey={`section:${section.id}:${item.id}:${item.label}`}
+              active={activeNavKey === `section:${section.id}:${item.id}:${item.label}`}
+              onActivate={onActivate}
+            />
+          ))}
+        </div>
+      </section>
+    );
+  }
+
   return (
     <section className={`nav-section ${collapsed ? "collapsed" : ""}`}>
-      <button className="section-label" type="button" onClick={() => onToggleSection(section.id)}>
-        <ChevronDown className="section-chevron" size={11} strokeWidth={2.2} />
-        <span className="section-title">{section.title}</span>
+      <div className="section-label">
+        <button
+          className="section-toggle"
+          type="button"
+          aria-expanded={!collapsed}
+          onClick={() => onToggleSection(section.id)}
+        >
+          <ChevronDown className="section-chevron" size={11} strokeWidth={2.2} />
+          <span className="section-title">{section.title}</span>
+        </button>
         {section.addable ? (
-          <span className="add-btn" aria-hidden="true">
+          <button
+            className="add-btn"
+            type="button"
+            aria-label={`新增${section.title}`}
+            onClick={() => onQuickAdd(section)}
+          >
             <Plus size={14} strokeWidth={2.1} />
-          </span>
+          </button>
         ) : null}
-      </button>
+      </div>
 
       <div className="section-body">
         {section.items?.map((item) => (
@@ -273,14 +633,14 @@ function SidebarSection({
           />
         ))}
 
-        {section.teams?.map((team) => (
-          <TeamBlock
-            key={team.id}
-            team={team}
-            activeModule={activeModule}
+        {section.groups?.map((group) => (
+          <MenuGroup
+            key={group.id}
+            sectionId={section.id}
+            group={group}
             activeNavKey={activeNavKey}
-            collapsed={Boolean(collapsedTeams[team.id])}
-            onToggle={() => onToggleTeam(team.id)}
+            collapsed={Boolean(collapsedGroups[group.id])}
+            onToggle={() => onToggleGroup(group.id)}
             onActivate={onActivate}
           />
         ))}
@@ -289,39 +649,44 @@ function SidebarSection({
   );
 }
 
-function TeamBlock({
-  team,
-  activeModule,
+function MenuGroup({
+  sectionId,
+  group,
   activeNavKey,
   collapsed,
   onToggle,
   onActivate,
 }: {
-  team: Team;
-  activeModule: ModuleId;
+  sectionId: string;
+  group: NavGroup;
   activeNavKey: string;
   collapsed: boolean;
   onToggle: () => void;
   onActivate: (id: ModuleId, navKey: string) => void;
 }) {
   return (
-    <div className="team-block">
-      <button className={`team-header ${collapsed ? "collapsed" : ""}`} type="button" onClick={onToggle}>
-        <ChevronDown className="team-chevron" size={11} strokeWidth={2.2} />
-        <span className="team-icon" style={{ background: team.color }}>
-          {team.initials}
+    <div className="menu-group" style={{ "--menu-group-color": group.color } as CSSProperties}>
+      <button
+        className={`menu-group-header ${collapsed ? "collapsed" : ""}`}
+        type="button"
+        aria-expanded={!collapsed}
+        onClick={onToggle}
+      >
+        <ChevronDown className="menu-group-chevron" size={11} strokeWidth={2.2} />
+        <span className="menu-group-icon" style={{ background: group.color }}>
+          {group.initials}
         </span>
-        <span className="team-name">{team.name}</span>
-        <span className="team-count">{team.count}</span>
+        <span className="menu-group-name">{group.name}</span>
+        <span className="menu-group-count">{group.count}</span>
       </button>
 
-      <div className="team-children">
-        {team.items.map((item) => (
+      <div className="menu-group-children">
+        {group.items.map((item) => (
           <SidebarItem
-            key={`${team.id}-${item.id}-${item.label}`}
+            key={`${group.id}-${item.id}-${item.label}`}
             item={item}
-            navKey={`team:${team.id}:${item.id}:${item.label}`}
-            active={activeNavKey === `team:${team.id}:${item.id}:${item.label}`}
+            navKey={`group:${sectionId}:${group.id}:${item.id}:${item.label}`}
+            active={activeNavKey === `group:${sectionId}:${group.id}:${item.id}:${item.label}`}
             onActivate={onActivate}
           />
         ))}
@@ -354,125 +719,25 @@ function SidebarItem({
   );
 }
 
-function IssueWorkspace({
-  issues,
-  activeTab,
-  selectedIssue,
-  onSelectTab,
-  onSelectIssue,
+function AdminWorkspace({
+  activeModule,
+  records,
+  query,
 }: {
-  issues: Issue[];
-  activeTab: IssueTab;
-  selectedIssue: string;
-  onSelectTab: (tab: IssueTab) => void;
-  onSelectIssue: (id: string) => void;
+  activeModule: ModuleId;
+  records: ManagementRecord[];
+  query: string;
 }) {
-  const counts = useMemo(() => {
-    return issueTabs.reduce<Record<IssueTab, number>>(
-      (acc, tab) => {
-        acc[tab.id] = tab.id === "all" ? issues.length : issues.filter((issue) => issue.status === tab.id).length;
-        return acc;
-      },
-      { all: 0, backlog: 0, todo: 0, progress: 0, done: 0, cancelled: 0 },
-    );
-  }, [issues]);
-
-  return (
-    <>
-      <div className="tabs" role="tablist" aria-label="事项状态">
-        {issueTabs.map((tab) => (
-          <button
-            key={tab.id}
-            className={`tab ${activeTab === tab.id ? "active" : ""}`}
-            type="button"
-            onClick={() => onSelectTab(tab.id)}
-            role="tab"
-            aria-selected={activeTab === tab.id}
-          >
-            {tab.label}
-            <span className="count">{counts[tab.id]}</span>
-          </button>
-        ))}
-      </div>
-
-      <div className="toolbar">
-        <button className="filter-btn" type="button">
-          <ListFilter size={13} strokeWidth={2.2} />
-          筛选
-        </button>
-        <button className="filter-btn" type="button">
-          <Eye size={13} strokeWidth={2.2} />
-          显示
-          <ChevronDown size={11} strokeWidth={2.2} />
-        </button>
-        <button className="filter-btn" type="button">
-          分组：状态
-          <X size={12} strokeWidth={2.1} />
-        </button>
-        <button className="filter-btn" type="button">
-          排序：优先级
-          <X size={12} strokeWidth={2.1} />
-        </button>
-      </div>
-
-      <div className="content">
-        <div className="issue-list" role="list">
-          {issues.map((issue) => (
-            <IssueRow
-              key={issue.id}
-              issue={issue}
-              selected={selectedIssue === issue.id}
-              onSelect={() => onSelectIssue(issue.id)}
-            />
-          ))}
-          {issues.length === 0 ? <div className="empty-state">没有匹配的事项</div> : null}
-        </div>
-      </div>
-    </>
-  );
-}
-
-function IssueRow({ issue, selected, onSelect }: { issue: Issue; selected: boolean; onSelect: () => void }) {
-  const status = statusMeta[issue.status];
-
-  return (
-    <button className={`issue-row ${selected ? "selected" : ""}`} type="button" onClick={onSelect} role="listitem">
-      <span className={`priority priority-${issue.priority}`}>P{issue.priority}</span>
-      <span className="issue-id">{issue.id}</span>
-      <span className="issue-title">
-        <span className={issue.status === "done" ? "done" : ""}>{issue.title}</span>
-      </span>
-      <span className={`status-pill ${status.className}`}>
-        <span className="sdot" style={{ background: status.color }} />
-        {status.text}
-      </span>
-      <span className="issue-label">
-        <span className="label-dot" style={{ background: issue.color }} />
-        {issue.label}
-      </span>
-      <span className="issue-updated">{issue.updated}</span>
-      <span className="assignee-cell">
-        <Avatar initials={issue.assignee} color={issue.assigneeColor} size="small" />
-      </span>
-    </button>
-  );
-}
-
-function AdminWorkspace({ activeModule }: { activeModule: ModuleId }) {
   return (
     <div className="admin-content">
-      {activeModule === "members" ? <MembersPanel /> : null}
-      {activeModule === "roles" ? <RolesPanel /> : null}
-      {activeModule === "audit" ? <AuditPanel /> : null}
-      {activeModule === "integrations" ? <IntegrationsPanel /> : null}
-      {activeModule === "feedback" ? <FeedbackPanel /> : null}
-      {activeModule === "settings" ? <SettingsPanel /> : null}
-      {activeModule === "overview" ? <OverviewPanel /> : null}
+      {activeModule === "dashboard" ? <DashboardPanel /> : <ModulePanel activeModule={activeModule} records={records} query={query} />}
     </div>
   );
 }
 
-function OverviewPanel() {
+function DashboardPanel() {
+  const recentLogs = moduleRecords.operationLogs.slice(0, 3);
+
   return (
     <>
       <div className="metric-grid">
@@ -480,140 +745,116 @@ function OverviewPanel() {
           <MetricCard key={metric.label} icon={metric.icon} label={metric.label} value={metric.value} delta={metric.delta} />
         ))}
       </div>
-      <AuditPanel compact />
+
+      <div className="dashboard-grid">
+        <section className="admin-panel dashboard-panel">
+          <PanelHeader icon={moduleMeta.dashboard.icon} title="待办与风险" action="查看全部" />
+          <div className="data-table">
+            {workbenchTasks.map((task) => (
+              <div className="data-row dashboard-row" key={task.title}>
+                <div>
+                  <strong>{task.title}</strong>
+                  <span>{task.owner}</span>
+                </div>
+                <StatusText tone={task.tone}>待处理</StatusText>
+                <span className="muted-text">{task.time}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="admin-panel dashboard-panel">
+          <PanelHeader icon={moduleMeta.operationLogs.icon} title="最近操作" action="审计" />
+          <div className="data-table">
+            {recentLogs.map((log) => (
+              <div className="data-row dashboard-row" key={`${log.title}-${log.updated}`}>
+                <div>
+                  <strong>{log.title}</strong>
+                  <span>{log.owner}</span>
+                </div>
+                <StatusText tone={log.tone}>{log.status}</StatusText>
+                <span className="muted-text">{log.updated}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="admin-panel dashboard-panel dashboard-wide">
+          <PanelHeader icon={moduleMeta.articles.icon} title="内容运营概况" action="查看内容" />
+          <div className="data-table">
+            {contentHealth.map((item) => (
+              <div className="data-row dashboard-row" key={item.title}>
+                <div>
+                  <strong>{item.title}</strong>
+                  <span>{item.description}</span>
+                </div>
+                <StatusText tone={item.tone}>正常</StatusText>
+                <span className="muted-text">实时</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      </div>
     </>
   );
 }
 
-function MembersPanel() {
-  return (
-    <section className="admin-panel">
-      <PanelHeader icon={UserPlus} title="成员" action="邀请成员" />
-      <div className="data-table">
-        {members.map((member) => (
-          <div className="data-row" key={member.name}>
-            <div>
-              <strong>{member.name}</strong>
-              <span>{member.team}</span>
-            </div>
-            <span>{member.role}</span>
-            <StatusText tone={member.status === "在线" ? "green" : "muted"}>{member.status}</StatusText>
-            <span className="muted-text">{member.lastSeen}</span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
+function ModulePanel({
+  activeModule,
+  records,
+  query,
+}: {
+  activeModule: Exclude<ModuleId, "dashboard">;
+  records: ManagementRecord[];
+  query: string;
+}) {
+  const meta = moduleMeta[activeModule];
 
-function RolesPanel() {
   return (
-    <section className="admin-panel">
-      <PanelHeader icon={Shield} title="团队与权限" action="新建角色" />
-      <div className="data-table">
-        {roles.map((role) => (
-          <div className="data-row role-row" key={role.name}>
-            <div>
-              <strong>{role.name}</strong>
-              <span>{role.members} 位成员</span>
-            </div>
-            <span>{role.access}</span>
-            <span className="muted-text">{role.updated}</span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function AuditPanel({ compact = false }: { compact?: boolean }) {
-  return (
-    <section className="admin-panel">
-      <PanelHeader icon={FileText} title={compact ? "最近审计" : "审计日志"} action="导出" />
-      <div className="data-table">
-        {auditLogs.map((log) => (
-          <div className="data-row audit-row" key={`${log.action}-${log.time}`}>
-            <div>
-              <strong>{log.action}</strong>
-              <span>{log.actor}</span>
-            </div>
-            <span>{log.target}</span>
-            <span className="muted-text">{log.time}</span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
-function IntegrationsPanel() {
-  return (
-    <section className="admin-panel">
-      <PanelHeader icon={SlidersHorizontal} title="API 与集成" action="创建 token" />
-      <div className="integration-grid">
-        {integrations.map((integration) => {
-          const Icon = integration.icon;
-
-          return (
-            <button className="integration-card" type="button" key={integration.name}>
-              <span className="integration-icon" style={{ color: integration.accent }}>
-                <Icon size={18} strokeWidth={2.1} />
-              </span>
-              <strong>{integration.name}</strong>
-              <span>{integration.status}</span>
-            </button>
-          );
-        })}
-      </div>
-    </section>
-  );
-}
-
-function FeedbackPanel() {
-  return (
-    <section className="admin-panel">
-      <PanelHeader icon={PanelTop} title="反馈" action="查看全部" />
-      <div className="feedback-list">
-        <button className="feedback-item" type="button">
-          <strong>成员希望批量修改角色</strong>
-          <span>来自 Engineering，2 小时前</span>
+    <>
+      <div className="module-tools">
+        <button className="filter-btn" type="button">
+          <ListFilter size={13} strokeWidth={2.2} />
+          筛选
         </button>
-        <button className="feedback-item" type="button">
-          <strong>审计日志筛选需要保存视图</strong>
-          <span>来自 Admin，昨天</span>
+        <button className="filter-btn" type="button">
+          <Eye size={13} strokeWidth={2.2} />
+          显示字段
+          <ChevronDown size={11} strokeWidth={2.2} />
+        </button>
+        <button className="filter-btn" type="button">
+          状态：全部
+          <X size={12} strokeWidth={2.1} />
         </button>
       </div>
-    </section>
+
+      <section className="admin-panel">
+        <PanelHeader icon={meta.icon} title={meta.title} action={meta.action} />
+        <div className="data-table">
+          {records.map((record) => (
+            <RecordRow key={`${record.title}-${record.updated}`} record={record} />
+          ))}
+          {records.length === 0 ? (
+            <div className="empty-state">{query.trim() ? "没有匹配的记录" : "暂无记录"}</div>
+          ) : null}
+        </div>
+      </section>
+    </>
   );
 }
 
-function SettingsPanel() {
+function RecordRow({ record }: { record: ManagementRecord }) {
   return (
-    <section className="admin-panel">
-      <PanelHeader icon={SlidersHorizontal} title="设置" action="保存" />
-      <div className="settings-list">
-        <label>
-          <span>工作区名称</span>
-          <input defaultValue="Acme Inc" />
-        </label>
-        <label>
-          <span>默认角色</span>
-          <select defaultValue="Developer">
-            <option>Developer</option>
-            <option>Viewer</option>
-            <option>Admin</option>
-          </select>
-        </label>
-        <label>
-          <span>审计保留周期</span>
-          <select defaultValue="180 天">
-            <option>90 天</option>
-            <option>180 天</option>
-            <option>365 天</option>
-          </select>
-        </label>
+    <div className="data-row module-row">
+      <div>
+        <strong>{record.title}</strong>
+        <span>{record.description}</span>
       </div>
-    </section>
+      <span>{record.meta}</span>
+      <span>{record.owner}</span>
+      <StatusText tone={record.tone}>{record.status}</StatusText>
+      <span className="muted-text">{record.updated}</span>
+    </div>
   );
 }
 
@@ -668,7 +909,7 @@ function Avatar({
   );
 }
 
-function StatusText({ tone, children }: { tone: "green" | "muted"; children: string }) {
+function StatusText({ tone, children }: { tone: StatusTone; children: string }) {
   return <span className={`status-text ${tone}`}>{children}</span>;
 }
 

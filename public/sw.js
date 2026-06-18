@@ -1,6 +1,6 @@
-const STATIC_CACHE = "admin-linear-demo-static-v1";
-const RUNTIME_CACHE = "admin-linear-demo-runtime-v1";
-const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon.svg"];
+const STATIC_CACHE = "admin-linear-demo-static-v4";
+const RUNTIME_CACHE = "admin-linear-demo-runtime-v4";
+const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon.png", "/logo.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
