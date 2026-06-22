@@ -20,6 +20,7 @@ import type { LucideIcon } from "lucide-react";
 
 export type ModuleId =
   | "dashboard"
+  | "buttonDemo"
   | "roles"
   | "permissions"
   | "menus"
@@ -90,7 +91,10 @@ export const sections: NavSection[] = [
     id: "dashboard",
     title: "工作台",
     standalone: true,
-    items: [{ id: "dashboard", label: "工作台", icon: LayoutDashboard }],
+    items: [
+      { id: "dashboard", label: "工作台", icon: LayoutDashboard },
+      { id: "buttonDemo", label: "演示台", icon: Activity },
+    ],
   },
   {
     id: "system",
@@ -145,6 +149,7 @@ export const sections: NavSection[] = [
 
 export const moduleRoutes: Record<ModuleId, string> = {
   dashboard: "/dashboard",
+  buttonDemo: "/demo/buttons",
   roles: "/system/roles",
   permissions: "/system/permissions",
   menus: "/system/menus",
@@ -162,6 +167,7 @@ export const moduleRoutes: Record<ModuleId, string> = {
 
 export const moduleMeta: Record<ModuleId, ModuleMeta> = {
   dashboard: { title: "工作台", scope: "工作台", icon: LayoutDashboard, action: "刷新数据" },
+  buttonDemo: { title: "按钮", scope: "工作台", icon: Activity, action: "复制规范" },
   roles: { title: "角色管理", scope: "系统管理", icon: Shield, action: "新建角色" },
   permissions: { title: "权限管理", scope: "系统管理", icon: Key, action: "新增权限" },
   menus: { title: "菜单管理", scope: "系统管理", icon: Menu, action: "新增菜单" },
@@ -192,6 +198,7 @@ export const workbenchTasks = [
 ];
 
 export const moduleRecords: Record<Exclude<ModuleId, "dashboard">, ManagementRecord[]> = {
+  buttonDemo: [],
   roles: [
     {
       title: "超级管理员",

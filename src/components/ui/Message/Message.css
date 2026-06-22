@@ -1,0 +1,150 @@
+.ui-message-viewport {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  width: min(440px, calc(100vw - 32px));
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.ui-message {
+  display: flex;
+  max-height: 64px;
+  min-height: 38px;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  overflow: hidden;
+  pointer-events: auto;
+  animation: ui-message-enter 0.16s ease-out both;
+  transition:
+    max-height 0.16s ease,
+    min-height 0.16s ease,
+    padding 0.16s ease,
+    margin-bottom 0.16s ease,
+    border-width 0.16s ease;
+}
+
+.ui-message.is-closing {
+  pointer-events: none;
+  animation: ui-message-exit 0.16s ease-in both;
+}
+
+.ui-message.is-collapsing {
+  max-height: 0;
+  min-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-width: 0;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.ui-message-icon {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  place-items: center;
+}
+
+.ui-message-success .ui-message-icon {
+  color: var(--green);
+}
+
+.ui-message-info .ui-message-icon,
+.ui-message-loading .ui-message-icon {
+  color: var(--accent);
+}
+
+.ui-message-warning .ui-message-icon {
+  color: var(--amber);
+}
+
+.ui-message-error .ui-message-icon {
+  color: var(--red);
+}
+
+.ui-message-content {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-message-close {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.ui-message-close:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.ui-message-spinner {
+  animation: ui-message-spin 0.8s linear infinite;
+}
+
+@keyframes ui-message-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ui-message-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+    visibility: hidden;
+  }
+}
+
+@keyframes ui-message-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .ui-message-viewport {
+    top: 12px;
+    width: calc(100vw - 24px);
+  }
+}
