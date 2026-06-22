@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import type { CSSProperties, RefObject } from "react";
 import { Check, ChevronDown, Command, LogOut, MoreHorizontal, Plus, Search, Settings, UserRound } from "lucide-react";
 import type { ModuleId, NavGroup, NavItem, NavSection } from "../../../config/modules";
@@ -51,82 +52,90 @@ function AppSidebar({
   onQuickAdd,
   onActivate,
 }: AppSidebarProps) {
+  const normalizedQuery = query.trim().toLowerCase();
+  const isFiltering = normalizedQuery.length > 0;
+  const visibleSections = useMemo(() => filterNavSections(sections, normalizedQuery), [sections, normalizedQuery]);
+
   return (
     <aside className="sidebar" aria-label="主导航">
       <div className="sidebar-scroll">
-        <div className="workspace-switcher" ref={workspaceMenuRef}>
-          <button
-            className={`workspace ${workspaceOpen ? "open" : ""}`}
-            onClick={onWorkspaceToggle}
-            type="button"
-            aria-haspopup="menu"
-            aria-expanded={workspaceOpen}
-          >
-            <span className="ws-logo" aria-hidden="true">
-              <img src="/logo.png" alt="" />
-            </span>
-            <span className="ws-name">Lonear Admin</span>
-            <ChevronDown className="ws-chevron" size={13} strokeWidth={2.2} />
-          </button>
+        <div className="sidebar-header">
+          <div className="workspace-switcher" ref={workspaceMenuRef}>
+            <button
+              className={`workspace ${workspaceOpen ? "open" : ""}`}
+              onClick={onWorkspaceToggle}
+              type="button"
+              aria-haspopup="menu"
+              aria-expanded={workspaceOpen}
+            >
+              <span className="ws-logo" aria-hidden="true">
+                <img src="/logo.png" alt="" />
+              </span>
+              <span className="ws-name">Lonear Admin</span>
+              <ChevronDown className="ws-chevron" size={13} strokeWidth={2.2} />
+            </button>
 
-          {workspaceOpen ? (
-            <div className="workspace-menu-popover" role="menu" aria-label="工作区菜单">
-              <button className="active" type="button" role="menuitem" onClick={() => onWorkspaceSelect("Lonear Admin")}>
-                <span className="ws-menu-logo">
-                  <img src="/logo.png" alt="" />
-                </span>
-                <span>
-                  <strong>Lonear Admin</strong>
-                  <small>当前工作区</small>
-                </span>
-                <Check size={14} strokeWidth={2.2} />
-              </button>
-              <button type="button" role="menuitem" onClick={() => onWorkspaceSelect("运营后台")}>
-                <span className="ws-menu-logo muted">运</span>
-                <span>
-                  <strong>运营后台</strong>
-                  <small>内容与消息</small>
-                </span>
-              </button>
-              <button type="button" role="menuitem" onClick={onWorkspaceManage}>
-                <Plus size={14} strokeWidth={2.2} />
-                <span>
-                  <strong>管理工作区</strong>
-                  <small>切换、创建或配置</small>
-                </span>
-              </button>
-            </div>
-          ) : null}
+            {workspaceOpen ? (
+              <div className="workspace-menu-popover" role="menu" aria-label="工作区菜单">
+                <button className="active" type="button" role="menuitem" onClick={() => onWorkspaceSelect("Lonear Admin")}>
+                  <span className="ws-menu-logo">
+                    <img src="/logo.png" alt="" />
+                  </span>
+                  <span>
+                    <strong>Lonear Admin</strong>
+                    <small>当前工作区</small>
+                  </span>
+                  <Check size={14} strokeWidth={2.2} />
+                </button>
+                <button type="button" role="menuitem" onClick={() => onWorkspaceSelect("运营后台")}>
+                  <span className="ws-menu-logo muted">运</span>
+                  <span>
+                    <strong>运营后台</strong>
+                    <small>内容与消息</small>
+                  </span>
+                </button>
+                <button type="button" role="menuitem" onClick={onWorkspaceManage}>
+                  <Plus size={14} strokeWidth={2.2} />
+                  <span>
+                    <strong>管理工作区</strong>
+                    <small>切换、创建或配置</small>
+                  </span>
+                </button>
+              </div>
+            ) : null}
+          </div>
+
+          <label className="search-box">
+            <Search size={15} strokeWidth={2.1} />
+            <input
+              ref={searchRef}
+              value={query}
+              onChange={(event) => onQueryChange(event.target.value)}
+              placeholder="搜索菜单..."
+              aria-label="搜索菜单"
+            />
+            <kbd>
+              <Command size={10} strokeWidth={2.4} />K
+            </kbd>
+          </label>
         </div>
 
-        <label className="search-box">
-          <Search size={15} strokeWidth={2.1} />
-          <input
-            ref={searchRef}
-            value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="搜索模块或记录..."
-            aria-label="搜索模块或记录"
-          />
-          <kbd>
-            <Command size={10} strokeWidth={2.4} />K
-          </kbd>
-        </label>
-
         <nav className="nav-stack">
-          {sections.map((section) => (
+          {visibleSections.map((section) => (
             <SidebarSection
               key={section.id}
               section={section}
               activeNavKey={activeNavKey}
-              collapsed={Boolean(collapsedSections[section.id])}
+              collapsed={isFiltering ? false : Boolean(collapsedSections[section.id])}
               collapsedGroups={collapsedGroups}
+              isFiltering={isFiltering}
               onToggleSection={onToggleSection}
               onToggleGroup={onToggleGroup}
               onQuickAdd={onQuickAdd}
               onActivate={onActivate}
             />
           ))}
+          {isFiltering && visibleSections.length === 0 ? <div className="nav-empty">没有匹配的菜单</div> : null}
         </nav>
       </div>
 
@@ -173,11 +182,47 @@ function AppSidebar({
   );
 }
 
+function filterNavSections(sections: NavSection[], query: string) {
+  if (!query) {
+    return sections;
+  }
+
+  return sections.reduce<NavSection[]>((matchedSections, section) => {
+    const sectionMatched = section.title.toLowerCase().includes(query);
+    const items = sectionMatched
+      ? section.items
+      : section.items?.filter((item) => item.label.toLowerCase().includes(query));
+    const groups = sectionMatched
+      ? section.groups
+      : section.groups
+          ?.map((group) => {
+            const groupMatched = group.name.toLowerCase().includes(query);
+            const groupItems = groupMatched
+              ? group.items
+              : group.items.filter((item) => item.label.toLowerCase().includes(query));
+
+            if (!groupMatched && groupItems.length === 0) {
+              return null;
+            }
+
+            return { ...group, items: groupItems, count: groupItems.length };
+          })
+          .filter((group): group is NavGroup => Boolean(group));
+
+    if (sectionMatched || (items?.length ?? 0) > 0 || (groups?.length ?? 0) > 0) {
+      matchedSections.push({ ...section, items, groups });
+    }
+
+    return matchedSections;
+  }, []);
+}
+
 function SidebarSection({
   section,
   activeNavKey,
   collapsed,
   collapsedGroups,
+  isFiltering,
   onToggleSection,
   onToggleGroup,
   onQuickAdd,
@@ -187,6 +232,7 @@ function SidebarSection({
   activeNavKey: string;
   collapsed: boolean;
   collapsedGroups: Record<string, boolean>;
+  isFiltering: boolean;
   onToggleSection: (id: string) => void;
   onToggleGroup: (id: string) => void;
   onQuickAdd: (section: NavSection) => void;
@@ -249,7 +295,7 @@ function SidebarSection({
             sectionId={section.id}
             group={group}
             activeNavKey={activeNavKey}
-            collapsed={Boolean(collapsedGroups[group.id])}
+            collapsed={isFiltering ? false : Boolean(collapsedGroups[group.id])}
             onToggle={() => onToggleGroup(group.id)}
             onActivate={onActivate}
           />

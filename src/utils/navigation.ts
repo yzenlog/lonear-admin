@@ -1,8 +1,6 @@
 import { moduleRoutes, sections } from "../config/modules";
 import type { ModuleId } from "../config/modules";
 import { DASHBOARD_NAV_KEY } from "../config/app";
-import { moduleRecords } from "../mocks/managementRecords";
-import type { ManagementRecord } from "../mocks/managementRecords";
 
 export const moduleRouteEntries = Object.entries(moduleRoutes) as Array<[ModuleId, string]>;
 
@@ -75,19 +73,4 @@ export function getLoginRedirectPath(state: unknown, search: string) {
   }
 
   return moduleRoutes.dashboard;
-}
-
-export function filterModuleRecords(moduleId: Exclude<ModuleId, "dashboard">, query: string): ManagementRecord[] {
-  const normalized = query.trim().toLowerCase();
-  const records = moduleRecords[moduleId];
-
-  if (!normalized) {
-    return records;
-  }
-
-  return records.filter((record) =>
-    [record.title, record.description, record.meta, record.owner, record.status].some((value) =>
-      value.toLowerCase().includes(normalized),
-    ),
-  );
 }

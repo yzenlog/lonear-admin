@@ -10,10 +10,6 @@ import PageTabs from "../components/shared/page-tabs/PageTabs";
 import AppSidebar from "../components/shared/app-sidebar/AppSidebar";
 import "./AdminLayout.css";
 
-export type AdminLayoutOutletContext = {
-  query: string;
-};
-
 type AdminLayoutProps = {
   onLogout: () => void;
 };
@@ -22,7 +18,7 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const activeModule = getModuleIdFromPathname(location.pathname) ?? "dashboard";
-  const [query, setQuery] = useState("");
+  const [menuQuery, setMenuQuery] = useState("");
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
@@ -184,7 +180,7 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
       <AppSidebar
         sections={sections}
         activeNavKey={activeNavKey}
-        query={query}
+        query={menuQuery}
         workspaceOpen={workspaceOpen}
         userMenuOpen={userMenuOpen}
         collapsedSections={collapsedSections}
@@ -192,7 +188,7 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
         searchRef={searchRef}
         workspaceMenuRef={workspaceMenuRef}
         userMenuRef={userMenuRef}
-        onQueryChange={setQuery}
+        onQueryChange={setMenuQuery}
         onWorkspaceToggle={() => {
           setWorkspaceOpen((open) => !open);
           setUserMenuOpen(false);
@@ -255,7 +251,7 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
         <PageTabs tabs={openTabs} activeModule={activeModule} onSelect={selectTab} onClose={closeTab} />
 
         <div className="admin-content">
-          <Outlet context={{ query }} />
+          <Outlet />
         </div>
       </main>
     </div>

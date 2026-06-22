@@ -9,10 +9,9 @@ import "./ManagementModulePage.css";
 type ManagementModulePageProps = {
   moduleId: Exclude<ModuleId, "dashboard">;
   records: ManagementRecord[];
-  query: string;
 };
 
-function ManagementModulePage({ moduleId, records, query }: ManagementModulePageProps) {
+function ManagementModulePage({ moduleId, records }: ManagementModulePageProps) {
   const meta = moduleMeta[moduleId];
 
   return (
@@ -40,7 +39,7 @@ function ManagementModulePage({ moduleId, records, query }: ManagementModulePage
             <RecordRow key={`${record.title}-${record.updated}`} record={record} />
           ))}
           {records.length === 0 ? (
-            <div className="empty-state">{query.trim() ? "没有匹配的记录" : "暂无记录"}</div>
+            <div className="empty-state">暂无记录</div>
           ) : null}
         </div>
       </section>
