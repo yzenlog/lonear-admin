@@ -1,5 +1,5 @@
-const STATIC_CACHE = "admin-linear-demo-static-v6";
-const RUNTIME_CACHE = "admin-linear-demo-runtime-v6";
+const STATIC_CACHE = "lonear-admin-static-v1";
+const RUNTIME_CACHE = "lonear-admin-runtime-v1";
 const APP_SHELL = ["/", "/index.html", "/manifest.webmanifest", "/icon.png", "/logo.png"];
 
 self.addEventListener("install", (event) => {

@@ -1,7 +1,8 @@
 {
-  "name": "admin-linear-demo",
+  "name": "lonear-admin",
   "version": "0.1.0",
-  "private": true,
+  "description": "Open-source React admin dashboard scaffold built with Vite.",
+  "private": false,
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
@@ -10,16 +11,16 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "^4.3.3",
     "lucide-react": "^0.468.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^7.18.0",
-    "vite": "^5.4.11"
+    "react-router-dom": "^7.18.0"
   },
   "devDependencies": {
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "typescript": "^5.6.3"
+    "@vitejs/plugin-react": "^4.3.3",
+    "typescript": "^5.6.3",
+    "vite": "^5.4.11"
   }
 }

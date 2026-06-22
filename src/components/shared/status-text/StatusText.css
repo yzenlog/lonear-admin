@@ -1,0 +1,47 @@
+.status-text {
+  display: inline-flex;
+  width: fit-content;
+  min-height: 22px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 22px;
+  white-space: nowrap;
+}
+
+.status-text::before {
+  width: 6px;
+  height: 6px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: currentColor;
+  content: "";
+}
+
+.status-text.green {
+  background: rgba(26, 157, 98, 0.13);
+  color: var(--green);
+}
+
+.status-text.amber {
+  background: rgba(224, 138, 0, 0.13);
+  color: var(--amber);
+}
+
+.status-text.red {
+  background: rgba(224, 65, 58, 0.12);
+  color: var(--red);
+}
+
+.status-text.blue {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.status-text.muted {
+  background: var(--surface-2);
+  color: var(--text-muted);
+}

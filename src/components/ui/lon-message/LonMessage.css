@@ -1,0 +1,150 @@
+.lon-message-viewport {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  width: min(440px, calc(100vw - 32px));
+  pointer-events: none;
+  transform: translateX(-50%);
+}
+
+.lon-message {
+  display: flex;
+  max-height: 64px;
+  min-height: 38px;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  padding: 8px 10px;
+  margin-bottom: 8px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  overflow: hidden;
+  pointer-events: auto;
+  animation: lon-message-enter 0.16s ease-out both;
+  transition:
+    max-height 0.16s ease,
+    min-height 0.16s ease,
+    padding 0.16s ease,
+    margin-bottom 0.16s ease,
+    border-width 0.16s ease;
+}
+
+.lon-message.is-closing {
+  pointer-events: none;
+  animation: lon-message-exit 0.16s ease-in both;
+}
+
+.lon-message.is-collapsing {
+  max-height: 0;
+  min-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-bottom: 0;
+  border-width: 0;
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.lon-message-icon {
+  display: grid;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  place-items: center;
+}
+
+.lon-message-success .lon-message-icon {
+  color: var(--green);
+}
+
+.lon-message-info .lon-message-icon,
+.lon-message-loading .lon-message-icon {
+  color: var(--accent);
+}
+
+.lon-message-warning .lon-message-icon {
+  color: var(--amber);
+}
+
+.lon-message-error .lon-message-icon {
+  color: var(--red);
+}
+
+.lon-message-content {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 20px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.lon-message-close {
+  display: grid;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+
+.lon-message-close:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.lon-message-spinner {
+  animation: lon-message-spin 0.8s linear infinite;
+}
+
+@keyframes lon-message-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes lon-message-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+    visibility: hidden;
+  }
+}
+
+@keyframes lon-message-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 640px) {
+  .lon-message-viewport {
+    top: 12px;
+    width: calc(100vw - 24px);
+  }
+}

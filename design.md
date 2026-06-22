@@ -1,6 +1,6 @@
-# Admin Linear Demo Design Guide
+# Lonear Admin Design Guide
 
-本文档定义本项目后续界面开发的 UI 方向、公共组件边界和组件视觉规则。当前项目是一个基于 React + Vite + lucide-react 的后台管理系统，现有视觉来源以 `src/App.css` 和 `src/App.tsx` 为准。
+本文档定义本项目后续界面开发的 UI 方向、公共组件边界和组件视觉规则。当前项目是一个基于 React + Vite + lucide-react 的后台管理系统，现有视觉来源以 `src/styles/global.css`、`src/layouts` 和 `src/components` 为准。
 
 ## 1. 设计定位
 
@@ -33,7 +33,7 @@
 
 ## 3. 视觉 Tokens
 
-后续新增样式优先复用 `src/App.css` 的 `:root` 变量。除非确实扩展语义，不要在业务组件中随手新增颜色。
+后续新增样式优先复用 `src/styles/global.css` 的 `:root` 变量。除非确实扩展语义，不要在业务组件中随手新增颜色。
 
 ### 色彩
 

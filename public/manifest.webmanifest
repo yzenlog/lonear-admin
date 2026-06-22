@@ -1,7 +1,7 @@
 {
-  "name": "Admin Linear Demo",
-  "short_name": "Admin",
-  "description": "Linear style admin management shell built with React.",
+  "name": "Lonear Admin",
+  "short_name": "Lonear",
+  "description": "Open-source React admin dashboard scaffold.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
