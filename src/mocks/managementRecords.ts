@@ -12,6 +12,7 @@ export type ManagementRecord = {
 
 export const moduleRecords: Record<Exclude<ModuleId, "dashboard">, ManagementRecord[]> = {
   componentShowcase: [],
+  dataModels: [],
   roles: [
     {
       title: "超级管理员",

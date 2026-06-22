@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Bell, ChevronRight, Menu, Moon, Sun } from "lucide-react";
+import type { CSSProperties } from "react";
+import { Bell, Check, ChevronRight, Menu, Moon, Palette, Settings, Sun } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import type { ThemeMode } from "../config/app";
+import { ACCENT_COLOR_OPTIONS, TAB_STATE_STORAGE_KEY } from "../config/app";
+import type { AccentColor, ThemeMode, UiSettings } from "../config/app";
 import { moduleMeta, moduleRoutes, sections } from "../config/modules";
 import type { ModuleId, NavSection } from "../config/modules";
 import { moduleRecords } from "../mocks/managementRecords";
 import type { ManagementRecord } from "../mocks/managementRecords";
-import { getInitialThemeMode, syncThemeMode } from "../services/session";
+import { getInitialThemeMode, getInitialUiSettings, persistUiSettings, syncThemeMode } from "../services/session";
 import { getModuleIdFromPathname, getNavKeyForModule } from "../utils/navigation";
 import PageTabs from "../components/shared/page-tabs/PageTabs";
 import AppSidebar from "../components/shared/app-sidebar/AppSidebar";
+import { LonDrawer } from "../components/ui";
 import "./AdminLayout.css";
 
 type AdminLayoutProps = {
@@ -22,6 +25,49 @@ type TopbarNotification = ManagementRecord & {
   sourceLabel: string;
   unread: boolean;
 };
+
+function getDefaultOpenTabs(activeModule: ModuleId): ModuleId[] {
+  return activeModule === "dashboard" ? ["dashboard"] : ["dashboard", activeModule];
+}
+
+function isModuleId(value: unknown): value is ModuleId {
+  return typeof value === "string" && Object.prototype.hasOwnProperty.call(moduleRoutes, value);
+}
+
+function normalizeOpenTabs(tabIds: unknown[], activeModule: ModuleId): ModuleId[] {
+  const tabs = tabIds.filter(isModuleId);
+  const normalizedTabs: ModuleId[] = [];
+  const tabCandidates: ModuleId[] = ["dashboard", ...tabs, activeModule];
+
+  tabCandidates.forEach((tabId) => {
+    if (!normalizedTabs.includes(tabId)) {
+      normalizedTabs.push(tabId);
+    }
+  });
+
+  return normalizedTabs;
+}
+
+function getInitialOpenTabs(activeModule: ModuleId): ModuleId[] {
+  if (typeof window === "undefined") {
+    return getDefaultOpenTabs(activeModule);
+  }
+
+  const settings = getInitialUiSettings();
+
+  if (!settings.tabsPersistent) {
+    return getDefaultOpenTabs(activeModule);
+  }
+
+  try {
+    const rawTabs = window.localStorage.getItem(TAB_STATE_STORAGE_KEY);
+    const parsedTabs = rawTabs ? (JSON.parse(rawTabs) as unknown) : [];
+
+    return normalizeOpenTabs(Array.isArray(parsedTabs) ? parsedTabs : [], activeModule);
+  } catch {
+    return getDefaultOpenTabs(activeModule);
+  }
+}
 
 function getFocusedSidebarState(navSections: NavSection[], activeNavKey: string) {
   const [activeType, activeSectionId, activeGroupId] = activeNavKey.split(":");
@@ -75,6 +121,7 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
   const activeModule = getModuleIdFromPathname(location.pathname) ?? "dashboard";
   const [menuQuery, setMenuQuery] = useState("");
   const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode);
+  const [uiSettings, setUiSettings] = useState<UiSettings>(getInitialUiSettings);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     system: false,
@@ -88,9 +135,8 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
   const [notice, setNotice] = useState("工作区已同步");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
-  const [openTabs, setOpenTabs] = useState<ModuleId[]>(() =>
-    activeModule === "dashboard" ? ["dashboard"] : ["dashboard", activeModule],
-  );
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [openTabs, setOpenTabs] = useState<ModuleId[]>(() => getInitialOpenTabs(activeModule));
   const [contentRefreshKey, setContentRefreshKey] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
   const workspaceMenuRef = useRef<HTMLDivElement>(null);
@@ -119,8 +165,25 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
   const unreadNotificationCount = notificationItems.filter((item) => item.unread).length;
 
   useEffect(() => {
-    syncThemeMode(themeMode);
-  }, [themeMode]);
+    syncThemeMode(themeMode, uiSettings.accentColor);
+  }, [themeMode, uiSettings.accentColor]);
+
+  useEffect(() => {
+    persistUiSettings(uiSettings);
+  }, [uiSettings]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (!uiSettings.tabsPersistent) {
+      window.localStorage.removeItem(TAB_STATE_STORAGE_KEY);
+      return;
+    }
+
+    window.localStorage.setItem(TAB_STATE_STORAGE_KEY, JSON.stringify(openTabs));
+  }, [openTabs, uiSettings.tabsPersistent]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -135,7 +198,7 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
   }, []);
 
   useEffect(() => {
-    setOpenTabs((currentTabs) => (currentTabs.includes(activeModule) ? currentTabs : [...currentTabs, activeModule]));
+    setOpenTabs((currentTabs) => normalizeOpenTabs(currentTabs, activeModule));
   }, [activeModule]);
 
   useEffect(() => {
@@ -335,7 +398,50 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
 
   function handleThemeModeChange(mode: ThemeMode) {
     setThemeMode(mode);
-    setNotice(mode === "dark" ? "已切换为 dark 主题" : "已切换为 light 主题");
+    setNotice(mode === "dark" ? "已切换为深色模式" : "已切换为浅色模式");
+  }
+
+  function handleThemeModeToggle() {
+    const nextThemeMode = themeMode === "dark" ? "light" : "dark";
+
+    handleThemeModeChange(nextThemeMode);
+  }
+
+  function handleSettingsToggle() {
+    setSettingsOpen((open) => !open);
+    setWorkspaceOpen(false);
+    setUserMenuOpen(false);
+    setNotificationOpen(false);
+  }
+
+  function handleTabsPersistenceToggle() {
+    const nextTabsPersistent = !uiSettings.tabsPersistent;
+
+    setUiSettings((currentSettings) => ({
+      ...currentSettings,
+      tabsPersistent: nextTabsPersistent,
+    }));
+    setNotice(nextTabsPersistent ? "标签持久化已开启" : "标签持久化已关闭");
+  }
+
+  function handleNoticeToggle() {
+    const nextShowNotice = !uiSettings.showNotice;
+
+    setUiSettings((currentSettings) => ({
+      ...currentSettings,
+      showNotice: nextShowNotice,
+    }));
+    setNotice(nextShowNotice ? "状态提示已显示" : "状态提示已隐藏");
+  }
+
+  function handleAccentColorChange(accentColor: AccentColor) {
+    const accentOption = ACCENT_COLOR_OPTIONS.find((option) => option.id === accentColor);
+
+    setUiSettings((currentSettings) => ({
+      ...currentSettings,
+      accentColor,
+    }));
+    setNotice(`主题色已切换为${accentOption?.label ?? "默认"}`);
   }
 
   function handleSectionQuickAdd(section: NavSection) {
@@ -361,6 +467,7 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
     setNotificationOpen((open) => !open);
     setWorkspaceOpen(false);
     setUserMenuOpen(false);
+    setSettingsOpen(false);
   }
 
   function handleNotificationOpen(item: TopbarNotification) {
@@ -378,6 +485,7 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
   function handleLogout() {
     setUserMenuOpen(false);
     setNotificationOpen(false);
+    setSettingsOpen(false);
     onLogout();
   }
 
@@ -399,6 +507,7 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
           setWorkspaceOpen((open) => !open);
           setUserMenuOpen(false);
           setNotificationOpen(false);
+          setSettingsOpen(false);
         }}
         onWorkspaceSelect={handleWorkspaceSelect}
         onWorkspaceManage={handleWorkspaceManage}
@@ -406,6 +515,7 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
           setUserMenuOpen((open) => !open);
           setWorkspaceOpen(false);
           setNotificationOpen(false);
+          setSettingsOpen(false);
         }}
         onUserMenuAction={handleUserMenuAction}
         onLogout={handleLogout}
@@ -428,7 +538,7 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
             <span>{meta.title}</span>
           </div>
           <div className="topbar-actions">
-            <span className="notice">{notice}</span>
+            {uiSettings.showNotice ? <span className="notice">{notice}</span> : null}
             <div className="notification-wrap" ref={notificationMenuRef}>
               <button
                 className={`icon-btn notification-trigger ${notificationOpen ? "active" : ""}`}
@@ -495,28 +605,102 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
                 </div>
               ) : null}
             </div>
-            <div className="theme-switch" role="group" aria-label="light dark 主题切换">
-              <button
-                className={`theme-option ${themeMode === "light" ? "active" : ""}`}
-                type="button"
-                aria-pressed={themeMode === "light"}
-                onClick={() => handleThemeModeChange("light")}
-              >
+            <button
+              className={`icon-btn settings-trigger ${settingsOpen ? "active" : ""}`}
+              type="button"
+              aria-label="系统设置"
+              aria-expanded={settingsOpen}
+              onClick={handleSettingsToggle}
+            >
+              <Settings size={17} strokeWidth={2.1} />
+            </button>
+            <button
+              className={`theme-switch theme-switch-${themeMode}`}
+              type="button"
+              role="switch"
+              aria-checked={themeMode === "dark"}
+              aria-label={themeMode === "dark" ? "深色模式，点击切换为浅色模式" : "浅色模式，点击切换为深色模式"}
+              onClick={handleThemeModeToggle}
+            >
+              <span className="theme-switch-icon theme-switch-icon-light" aria-hidden="true">
                 <Sun size={13} strokeWidth={2.2} />
-                <span>light</span>
-              </button>
-              <button
-                className={`theme-option ${themeMode === "dark" ? "active" : ""}`}
-                type="button"
-                aria-pressed={themeMode === "dark"}
-                onClick={() => handleThemeModeChange("dark")}
-              >
+              </span>
+              <span className="theme-switch-icon theme-switch-icon-dark" aria-hidden="true">
                 <Moon size={13} strokeWidth={2.2} />
-                <span>dark</span>
-              </button>
-            </div>
+              </span>
+              <span className="theme-switch-thumb" aria-hidden="true" />
+            </button>
           </div>
         </header>
+
+        <LonDrawer
+          open={settingsOpen}
+          title="系统设置"
+          description="界面偏好会保存在当前浏览器。"
+          placement="right"
+          onClose={() => setSettingsOpen(false)}
+        >
+          <div className="system-settings">
+            <section className="settings-section" aria-labelledby="settings-workspace-title">
+              <div className="settings-section-head">
+                <Settings size={15} strokeWidth={2.2} aria-hidden="true" />
+                <h3 id="settings-workspace-title">工作区</h3>
+              </div>
+              <button
+                className="settings-row"
+                type="button"
+                aria-pressed={uiSettings.tabsPersistent}
+                onClick={handleTabsPersistenceToggle}
+              >
+                <span className="settings-row-copy">
+                  <strong>标签持久化</strong>
+                  <small>下次进入时恢复已打开页面</small>
+                </span>
+                <span className={`settings-toggle ${uiSettings.tabsPersistent ? "active" : ""}`} aria-hidden="true">
+                  <span />
+                </span>
+              </button>
+              <button
+                className="settings-row"
+                type="button"
+                aria-pressed={uiSettings.showNotice}
+                onClick={handleNoticeToggle}
+              >
+                <span className="settings-row-copy">
+                  <strong>状态提示</strong>
+                  <small>在顶部显示最近一次操作反馈</small>
+                </span>
+                <span className={`settings-toggle ${uiSettings.showNotice ? "active" : ""}`} aria-hidden="true">
+                  <span />
+                </span>
+              </button>
+            </section>
+
+            <section className="settings-section" aria-labelledby="settings-theme-title">
+              <div className="settings-section-head">
+                <Palette size={15} strokeWidth={2.2} aria-hidden="true" />
+                <h3 id="settings-theme-title">主题色</h3>
+              </div>
+              <div className="accent-grid">
+                {ACCENT_COLOR_OPTIONS.map((option) => (
+                  <button
+                    className={`accent-option ${uiSettings.accentColor === option.id ? "active" : ""}`}
+                    type="button"
+                    aria-label={`主题色${option.label}`}
+                    aria-pressed={uiSettings.accentColor === option.id}
+                    key={option.id}
+                    style={{ "--accent-preview": option.previewColor } as CSSProperties}
+                    onClick={() => handleAccentColorChange(option.id)}
+                  >
+                    <span className="accent-preview" aria-hidden="true" />
+                    <span>{option.label}</span>
+                    {uiSettings.accentColor === option.id ? <Check size={14} strokeWidth={2.3} /> : null}
+                  </button>
+                ))}
+              </div>
+            </section>
+          </div>
+        </LonDrawer>
 
         <PageTabs
           tabs={openTabs}

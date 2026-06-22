@@ -4,6 +4,7 @@ import OperationLogPage from "../pages/audit/OperationLogPage";
 import ArticleManagementPage from "../pages/content/ArticleManagementPage";
 import BannerManagementPage from "../pages/content/BannerManagementPage";
 import FileManagementPage from "../pages/content/FileManagementPage";
+import DataModelPage from "../pages/development/DataModelPage";
 import WorkbenchPage from "../pages/dashboard/WorkbenchPage";
 import MessageInboxPage from "../pages/message/MessageInboxPage";
 import NoticeManagementPage from "../pages/message/NoticeManagementPage";
@@ -23,6 +24,7 @@ type AdminPageRouteProps = {
 const adminPageMap: Record<ModuleId, ComponentType> = {
   dashboard: WorkbenchPage,
   componentShowcase: ComponentShowcasePage,
+  dataModels: DataModelPage,
   roles: RoleManagementPage,
   permissions: PermissionManagementPage,
   menus: MenuManagementPage,

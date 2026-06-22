@@ -2,6 +2,7 @@ import {
   Activity,
   BookOpen,
   Building2,
+  Database,
   FileText,
   Folder,
   Globe2,
@@ -20,6 +21,7 @@ import type { LucideIcon } from "lucide-react";
 export type ModuleId =
   | "dashboard"
   | "componentShowcase"
+  | "dataModels"
   | "roles"
   | "permissions"
   | "menus"
@@ -104,6 +106,11 @@ export const sections: NavSection[] = [
     ],
   },
   {
+    id: "development",
+    title: "开发",
+    items: [{ id: "dataModels", label: "数据模型", icon: Database }],
+  },
+  {
     id: "content",
     title: "内容运营",
     addable: true,
@@ -132,6 +139,7 @@ export const sections: NavSection[] = [
 export const moduleRoutes: Record<ModuleId, string> = {
   dashboard: "/dashboard",
   componentShowcase: "/components/showcase",
+  dataModels: "/developer/data-models",
   roles: "/system/roles",
   permissions: "/system/permissions",
   menus: "/system/menus",
@@ -150,6 +158,7 @@ export const moduleRoutes: Record<ModuleId, string> = {
 export const moduleMeta: Record<ModuleId, ModuleMeta> = {
   dashboard: { title: "工作台", scope: "工作台", icon: LayoutDashboard, action: "刷新数据" },
   componentShowcase: { title: "演示台", scope: "工作台", icon: Activity, action: "查看组件" },
+  dataModels: { title: "数据模型", scope: "开发", icon: Database, action: "同步模型" },
   roles: { title: "角色管理", scope: "系统管理", icon: Shield, action: "新建角色" },
   permissions: { title: "权限管理", scope: "系统管理", icon: Key, action: "新增权限" },
   menus: { title: "菜单管理", scope: "系统管理", icon: Menu, action: "新增菜单" },
