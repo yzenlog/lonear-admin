@@ -1,6 +1,18 @@
 import { useMemo } from "react";
 import type { CSSProperties, RefObject } from "react";
-import { Check, ChevronDown, Command, LogOut, MoreHorizontal, Plus, Search, Settings, UserRound } from "lucide-react";
+import {
+  Check,
+  ChevronDown,
+  ChevronsDown,
+  Command,
+  LocateFixed,
+  LogOut,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Settings,
+  UserRound,
+} from "lucide-react";
 import type { ModuleId, NavGroup, NavItem, NavSection } from "../../../config/modules";
 import UserAvatar from "../user-avatar/UserAvatar";
 import "./AppSidebar.css";
@@ -23,6 +35,8 @@ type AppSidebarProps = {
   onUserMenuToggle: () => void;
   onUserMenuAction: (label: string) => void;
   onLogout: () => void;
+  onExpandAllMenus: () => void;
+  onFocusActiveMenu: () => void;
   onToggleSection: (id: string) => void;
   onToggleGroup: (id: string) => void;
   onQuickAdd: (section: NavSection) => void;
@@ -47,6 +61,8 @@ function AppSidebar({
   onUserMenuToggle,
   onUserMenuAction,
   onLogout,
+  onExpandAllMenus,
+  onFocusActiveMenu,
   onToggleSection,
   onToggleGroup,
   onQuickAdd,
@@ -60,64 +76,89 @@ function AppSidebar({
     <aside className="sidebar" aria-label="主导航">
       <div className="sidebar-scroll">
         <div className="sidebar-header">
-          <div className="workspace-switcher" ref={workspaceMenuRef}>
-            <button
-              className={`workspace ${workspaceOpen ? "open" : ""}`}
-              onClick={onWorkspaceToggle}
-              type="button"
-              aria-haspopup="menu"
-              aria-expanded={workspaceOpen}
-            >
-              <span className="ws-logo" aria-hidden="true">
-                <img src="/logo.png" alt="" />
-              </span>
-              <span className="ws-name">Lonear Admin</span>
-              <ChevronDown className="ws-chevron" size={13} strokeWidth={2.2} />
-            </button>
+          <div className="sidebar-title-row">
+            <div className="workspace-switcher" ref={workspaceMenuRef}>
+              <button
+                className={`workspace ${workspaceOpen ? "open" : ""}`}
+                onClick={onWorkspaceToggle}
+                type="button"
+                aria-haspopup="menu"
+                aria-expanded={workspaceOpen}
+              >
+                <span className="ws-logo" aria-hidden="true">
+                  <img src="/logo.png" alt="" />
+                </span>
+                <span className="ws-name">Lonear Admin</span>
+                <ChevronDown className="ws-chevron" size={13} strokeWidth={2.2} />
+              </button>
 
-            {workspaceOpen ? (
-              <div className="workspace-menu-popover" role="menu" aria-label="工作区菜单">
-                <button className="active" type="button" role="menuitem" onClick={() => onWorkspaceSelect("Lonear Admin")}>
-                  <span className="ws-menu-logo">
-                    <img src="/logo.png" alt="" />
-                  </span>
-                  <span>
-                    <strong>Lonear Admin</strong>
-                    <small>当前工作区</small>
-                  </span>
-                  <Check size={14} strokeWidth={2.2} />
-                </button>
-                <button type="button" role="menuitem" onClick={() => onWorkspaceSelect("运营后台")}>
-                  <span className="ws-menu-logo muted">运</span>
-                  <span>
-                    <strong>运营后台</strong>
-                    <small>内容与消息</small>
-                  </span>
-                </button>
-                <button type="button" role="menuitem" onClick={onWorkspaceManage}>
-                  <Plus size={14} strokeWidth={2.2} />
-                  <span>
-                    <strong>管理工作区</strong>
-                    <small>切换、创建或配置</small>
-                  </span>
-                </button>
-              </div>
-            ) : null}
+              {workspaceOpen ? (
+                <div className="workspace-menu-popover" role="menu" aria-label="工作区菜单">
+                  <button className="active" type="button" role="menuitem" onClick={() => onWorkspaceSelect("Lonear Admin")}>
+                    <span className="ws-menu-logo">
+                      <img src="/logo.png" alt="" />
+                    </span>
+                    <span>
+                      <strong>Lonear Admin</strong>
+                      <small>当前工作区</small>
+                    </span>
+                    <Check size={14} strokeWidth={2.2} />
+                  </button>
+                  <button type="button" role="menuitem" onClick={() => onWorkspaceSelect("运营后台")}>
+                    <span className="ws-menu-logo muted">运</span>
+                    <span>
+                      <strong>运营后台</strong>
+                      <small>内容与消息</small>
+                    </span>
+                  </button>
+                  <button type="button" role="menuitem" onClick={onWorkspaceManage}>
+                    <Plus size={14} strokeWidth={2.2} />
+                    <span>
+                      <strong>管理工作区</strong>
+                      <small>切换、创建或配置</small>
+                    </span>
+                  </button>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="sidebar-menu-actions" aria-label="菜单快捷操作">
+              <button
+                className="sidebar-menu-action-btn"
+                type="button"
+                aria-label="展开全部菜单"
+                data-tooltip="展开菜单"
+                onClick={onExpandAllMenus}
+              >
+                <ChevronsDown size={14} strokeWidth={2.1} />
+              </button>
+              <button
+                className="sidebar-menu-action-btn"
+                type="button"
+                aria-label="只展开当前菜单"
+                data-tooltip="聚焦菜单"
+                onClick={onFocusActiveMenu}
+              >
+                <LocateFixed size={14} strokeWidth={2.1} />
+              </button>
+            </div>
           </div>
 
-          <label className="search-box">
-            <Search size={15} strokeWidth={2.1} />
-            <input
-              ref={searchRef}
-              value={query}
-              onChange={(event) => onQueryChange(event.target.value)}
-              placeholder="搜索菜单..."
-              aria-label="搜索菜单"
-            />
-            <kbd>
-              <Command size={10} strokeWidth={2.4} />K
-            </kbd>
-          </label>
+          <div className="sidebar-search-row">
+            <label className="search-box">
+              <Search size={15} strokeWidth={2.1} />
+              <input
+                ref={searchRef}
+                value={query}
+                onChange={(event) => onQueryChange(event.target.value)}
+                placeholder="搜索菜单..."
+                aria-label="搜索菜单"
+              />
+              <kbd>
+                <Command size={10} strokeWidth={2.4} />K
+              </kbd>
+            </label>
+          </div>
         </div>
 
         <nav className="nav-stack">

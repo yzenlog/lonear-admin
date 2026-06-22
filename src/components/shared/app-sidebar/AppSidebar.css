@@ -40,54 +40,70 @@
   text-align: left;
 }
 
+.sidebar-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 12px 10px 6px;
+}
+
 .workspace-switcher {
   position: relative;
+  min-width: 0;
+  flex: 1;
 }
 
 .workspace {
   display: flex;
-  width: calc(100% - 20px);
+  width: auto;
+  max-width: 100%;
   align-items: center;
-  gap: 8px;
-  padding: 10px;
+  gap: 6px;
+  padding: 0;
   border: 1px solid transparent;
   border-radius: 8px;
-  margin: 12px 10px 6px;
+  margin: 0;
   transition:
-    background 0.12s ease,
+    color 0.12s ease,
     border-color 0.12s ease;
 }
 
 .workspace:hover {
-  background: var(--surface-hover);
+  color: var(--text);
 }
 
 .ws-logo {
   display: grid;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   flex-shrink: 0;
   place-items: center;
-  border-radius: 6px;
+  border-radius: 5px;
   background: transparent;
 }
 
 .ws-logo img {
   display: block;
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   object-fit: contain;
 }
 
 .ws-name {
-  flex: 1;
+  min-width: 0;
+  flex: 0 1 auto;
+  overflow: hidden;
   color: var(--text);
   font-size: 13.5px;
   font-weight: 600;
   letter-spacing: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .ws-chevron {
+  margin-left: -2px;
   color: var(--text-dim);
   transition: transform 0.15s ease;
 }
@@ -99,10 +115,11 @@
 .workspace-menu-popover {
   position: absolute;
   top: calc(100% + 4px);
-  right: 10px;
-  left: 10px;
+  right: auto;
+  left: 0;
   z-index: 20;
   display: grid;
+  width: 220px;
   gap: 2px;
   padding: 5px;
   border: 1px solid var(--border);
@@ -176,14 +193,22 @@
   color: var(--text-muted);
 }
 
+.sidebar-search-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 10px 12px;
+}
+
 .search-box {
   display: flex;
   align-items: center;
+  flex: 1;
   gap: 8px;
+  min-width: 0;
   padding: 7px 9px;
   border: 1px solid var(--border);
   border-radius: 7px;
-  margin: 4px 10px 12px;
   background: var(--surface);
   color: var(--text-dim);
   transition:
@@ -221,6 +246,71 @@
   color: var(--text-dim);
   font-family: inherit;
   font-size: 11px;
+}
+
+.sidebar-menu-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.sidebar-menu-action-btn {
+  position: relative;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-dim);
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.sidebar-menu-action-btn svg {
+  display: block;
+}
+
+.sidebar-menu-action-btn:hover {
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.sidebar-menu-action-btn::after {
+  position: absolute;
+  top: calc(100% + 7px);
+  right: 0;
+  z-index: 30;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  content: attr(data-tooltip);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-2px);
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+  white-space: nowrap;
+}
+
+.sidebar-menu-action-btn:hover::after,
+.sidebar-menu-action-btn:focus-visible::after {
+  opacity: 1;
+  transform: translateY(0);
 }
 
 .nav-stack {
@@ -619,12 +709,17 @@
 }
 
 @media (max-width: 860px) {
-  .workspace {
+  .sidebar-title-row {
     justify-content: center;
-    width: calc(100% - 14px);
-    padding: 7px;
     margin-right: 7px;
     margin-left: 7px;
+  }
+
+  .workspace {
+    justify-content: center;
+    width: auto;
+    padding: 7px;
+    margin: 0;
   }
 
   .workspace-menu-popover {
@@ -633,8 +728,15 @@
     width: 220px;
   }
 
+  .sidebar-search-row {
+    justify-content: center;
+    margin-right: 7px;
+    margin-left: 7px;
+  }
+
   .ws-name,
   .ws-chevron,
+  .sidebar-menu-actions,
   .search-box input,
   .search-box kbd,
   .section-label,

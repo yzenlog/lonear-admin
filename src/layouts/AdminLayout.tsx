@@ -23,6 +23,52 @@ type TopbarNotification = ManagementRecord & {
   unread: boolean;
 };
 
+function getFocusedSidebarState(navSections: NavSection[], activeNavKey: string) {
+  const [activeType, activeSectionId, activeGroupId] = activeNavKey.split(":");
+  const activePath = {
+    sectionId: activeSectionId,
+    groupId: activeType === "group" ? activeGroupId : undefined,
+  };
+
+  return navSections.reduce(
+    (state, section) => {
+      if (!section.standalone) {
+        state.sections[section.id] = section.id !== activePath.sectionId;
+      }
+
+      section.groups?.forEach((group) => {
+        state.groups[group.id] = section.id !== activePath.sectionId || group.id !== activePath.groupId;
+      });
+
+      return state;
+    },
+    {
+      sections: {} as Record<string, boolean>,
+      groups: {} as Record<string, boolean>,
+    },
+  );
+}
+
+function getExpandedSidebarState(navSections: NavSection[]) {
+  return navSections.reduce(
+    (state, section) => {
+      if (!section.standalone) {
+        state.sections[section.id] = false;
+      }
+
+      section.groups?.forEach((group) => {
+        state.groups[group.id] = false;
+      });
+
+      return state;
+    },
+    {
+      sections: {} as Record<string, boolean>,
+      groups: {} as Record<string, boolean>,
+    },
+  );
+}
+
 function AdminLayout({ onLogout }: AdminLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -173,6 +219,30 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
 
   function toggleGroup(id: string) {
     setCollapsedGroups((current) => ({ ...current, [id]: !current[id] }));
+  }
+
+  function expandAllMenus() {
+    const expandedSidebarState = getExpandedSidebarState(sections);
+
+    setMenuQuery("");
+    setCollapsedSections(expandedSidebarState.sections);
+    setCollapsedGroups(expandedSidebarState.groups);
+    setWorkspaceOpen(false);
+    setUserMenuOpen(false);
+    setNotificationOpen(false);
+    setNotice("已展开全部菜单");
+  }
+
+  function focusActiveMenu() {
+    const focusedSidebarState = getFocusedSidebarState(sections, activeNavKey);
+
+    setMenuQuery("");
+    setCollapsedSections(focusedSidebarState.sections);
+    setCollapsedGroups(focusedSidebarState.groups);
+    setWorkspaceOpen(false);
+    setUserMenuOpen(false);
+    setNotificationOpen(false);
+    setNotice("已聚焦当前菜单");
   }
 
   function activateModule(id: ModuleId) {
@@ -339,6 +409,8 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
         }}
         onUserMenuAction={handleUserMenuAction}
         onLogout={handleLogout}
+        onExpandAllMenus={expandAllMenus}
+        onFocusActiveMenu={focusActiveMenu}
         onToggleSection={toggleSection}
         onToggleGroup={toggleGroup}
         onQuickAdd={handleSectionQuickAdd}
