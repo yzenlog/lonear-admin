@@ -1,41 +1,51 @@
-.tabs {
+.page-tabs {
   display: flex;
-  min-height: 42px;
+  min-height: 44px;
   flex-shrink: 0;
-  gap: 4px;
+  align-items: center;
+  gap: 6px;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 10px 22px 0;
+  padding: 6px 22px;
   border-bottom: 1px solid var(--border);
   background: var(--tabs-bg);
+  backdrop-filter: blur(8px);
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
 
-.tabs::-webkit-scrollbar {
+.page-tabs::-webkit-scrollbar {
   display: none;
 }
 
-.tab-item {
+.page-tabs .tab-item {
+  position: relative;
   display: inline-flex;
   flex: 0 0 auto;
   align-items: center;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -1px;
+  height: 32px;
+  padding: 0 4px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
   color: var(--text-muted);
   transition:
+    background 0.12s ease,
     border-color 0.1s ease,
+    box-shadow 0.12s ease,
     color 0.1s ease;
 }
 
-.tab {
+.page-tabs .tab {
   display: inline-flex;
-  height: 32px;
+  max-width: 180px;
+  height: 30px;
   min-width: 0;
   align-items: center;
   gap: 6px;
-  padding: 0 10px;
+  padding: 0 7px;
   border: 0;
+  border-radius: 7px;
   background: transparent;
   color: inherit;
   cursor: pointer;
@@ -45,11 +55,17 @@
   white-space: nowrap;
 }
 
-.tab svg {
+.page-tabs .tab svg {
   flex-shrink: 0;
 }
 
-.tab-close {
+.page-tabs .tab span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.page-tabs .tab-close {
   display: inline-flex;
   width: 22px;
   height: 22px;
@@ -57,44 +73,140 @@
   justify-content: center;
   padding: 0;
   border: 0;
-  border-radius: 5px;
+  border-radius: 6px;
   background: transparent;
   color: var(--text-dim);
   cursor: pointer;
+  opacity: 0.42;
+  transition:
+    background 0.1s ease,
+    color 0.1s ease,
+    opacity 0.1s ease;
+}
+
+.page-tabs .tab-item:hover {
+  border-color: var(--border);
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.page-tabs .tab-item.active {
+  border-color: var(--border);
+  background: var(--accent-soft);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent-soft);
+}
+
+.page-tabs .tab-item.active .tab {
+  font-weight: 600;
+}
+
+.page-tabs .tab-item.active .tab svg {
+  color: var(--accent);
+}
+
+.page-tabs .tab-item.active .tab-close {
+  color: var(--accent);
+  opacity: 0.48;
+}
+
+.page-tabs .tab-item.active:hover {
+  border-color: var(--border-strong);
+  background: var(--accent-soft-2);
+}
+
+.page-tabs .tab-item:hover .tab-close,
+.page-tabs .tab-close:focus-visible {
+  opacity: 1;
+}
+
+.page-tabs .tab-close:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.page-tabs .tab:focus-visible,
+.page-tabs .tab-close:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.tab-context-menu {
+  position: fixed;
+  z-index: 1000;
+  display: grid;
+  width: 168px;
+  gap: 2px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+}
+
+.tab-menu-item {
+  display: flex;
+  width: 100%;
+  height: 30px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12.5px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-align: left;
   transition:
     background 0.1s ease,
     color 0.1s ease;
 }
 
-.tab-item:hover {
+.tab-menu-item svg {
+  flex-shrink: 0;
+  color: var(--text-dim);
+  transition: color 0.1s ease;
+}
+
+.tab-menu-item:hover:not(:disabled),
+.tab-menu-item:focus-visible {
+  background: var(--surface-hover);
   color: var(--text);
+  outline: 0;
 }
 
-.tab-item.active {
-  border-bottom-color: var(--accent);
-  color: var(--accent);
+.tab-menu-item:hover:not(:disabled) svg,
+.tab-menu-item:focus-visible svg {
+  color: var(--text-muted);
 }
 
-.tab-close:hover {
-  background: var(--surface);
-  color: var(--text);
+.tab-menu-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
 }
 
-.tab:focus-visible,
-.tab-close:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: -2px;
+.tab-menu-separator {
+  height: 1px;
+  margin: 3px 4px;
+  background: var(--border);
 }
 
 @media (max-width: 860px) {
-  .tabs {
+  .page-tabs {
     padding-right: 14px;
     padding-left: 14px;
   }
 }
 
 @media (max-width: 640px) {
-  .tabs {
+  .page-tabs {
     overflow-x: auto;
+  }
+
+  .page-tabs .tab {
+    max-width: 136px;
   }
 }

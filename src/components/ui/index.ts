@@ -25,5 +25,7 @@ export { default as LonRadioGroup } from "./lon-radio-group/LonRadioGroup";
 export type { LonChoiceOption, LonRadioGroupProps } from "./lon-radio-group/LonRadioGroup";
 export { default as LonSelect } from "./lon-select/LonSelect";
 export type { LonSelectOption, LonSelectProps } from "./lon-select/LonSelect";
+export { default as LonTag } from "./lon-tag/LonTag";
+export type { LonTagProps, LonTagTone } from "./lon-tag/LonTag";
 export { default as LonUpload } from "./lon-upload/LonUpload";
 export type { LonUploadProps } from "./lon-upload/LonUpload";

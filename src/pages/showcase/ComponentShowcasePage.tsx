@@ -1,6 +1,19 @@
 import { useState } from "react";
-import type { FormEvent } from "react";
-import { Bell, MoreHorizontal, PanelRight, Settings } from "lucide-react";
+import type { FormEvent, PointerEvent } from "react";
+import {
+  Bell,
+  Download,
+  Image as ImageIcon,
+  MoreHorizontal,
+  PanelRight,
+  RefreshCw,
+  RotateCcw,
+  RotateCw,
+  Settings,
+  Tags,
+  ZoomIn,
+  ZoomOut,
+} from "lucide-react";
 import {
   LonButton,
   LonCheckboxGroup,
@@ -11,11 +24,18 @@ import {
   LonNumberInput,
   LonRadioGroup,
   LonSelect,
+  LonTag,
   LonUpload,
   useLonMessage,
   useLonNotification,
 } from "../../components/ui";
-import type { LonButtonVariant, LonButtonVisualState, LonDrawerPlacement, LonNumberInputValue } from "../../components/ui";
+import type {
+  LonButtonVariant,
+  LonButtonVisualState,
+  LonDrawerPlacement,
+  LonNumberInputValue,
+  LonTagTone,
+} from "../../components/ui";
 import PanelHeader from "../../components/shared/panel-header/PanelHeader";
 import { moduleMeta } from "../../config/modules";
 
@@ -38,12 +58,108 @@ type ShowcaseFormValues = {
 
 type ShowcaseModalType = "basic" | "confirm" | "large" | null;
 type ShowcaseDrawerType = LonDrawerPlacement | "detail" | null;
+type ShowcaseImage = {
+  title: string;
+  description: string;
+  src: string;
+  downloadName: string;
+  meta: string;
+};
+type ImagePreviewState = {
+  scale: number;
+  rotation: number;
+  offsetX: number;
+  offsetY: number;
+};
+type ImageDragOrigin = {
+  pointerId: number;
+  startX: number;
+  startY: number;
+  offsetX: number;
+  offsetY: number;
+};
+type ShowcaseTag = {
+  label: string;
+  tone: LonTagTone;
+  dot?: boolean;
+  selected?: boolean;
+  disabled?: boolean;
+};
+
+const showcaseTagRows: Array<{
+  title: string;
+  description: string;
+  tags: ShowcaseTag[];
+}> = [
+  {
+    title: "基础标签",
+    description: "用于分类、属性和轻量标记",
+    tags: [
+      { label: "默认", tone: "neutral" },
+      { label: "已选", tone: "blue", selected: true },
+      { label: "无圆点", tone: "neutral", dot: false },
+      { label: "禁用", tone: "neutral", disabled: true },
+    ],
+  },
+  {
+    title: "语义标签",
+    description: "用于区分状态、风险和团队属性",
+    tags: [
+      { label: "进行中", tone: "blue" },
+      { label: "已完成", tone: "green" },
+      { label: "待复核", tone: "amber" },
+      { label: "已下线", tone: "red" },
+      { label: "运营组", tone: "purple" },
+    ],
+  },
+];
+
+const selectableTagOptions: ShowcaseTag[] = [
+  { label: "内容运营", tone: "blue" },
+  { label: "权限审计", tone: "green" },
+  { label: "安全风险", tone: "red" },
+  { label: "团队协作", tone: "purple" },
+];
+
+const initialClosableTags: ShowcaseTag[] = [
+  { label: "新用户", tone: "green" },
+  { label: "重要公告", tone: "amber" },
+  { label: "内部可见", tone: "blue" },
+];
+
+const showcaseImages: ShowcaseImage[] = [
+  {
+    title: "品牌 Logo",
+    description: "透明底品牌主视觉资源",
+    src: "/logo.png",
+    downloadName: "lonear-logo.png",
+    meta: "1254 x 1254 · PNG",
+  },
+  {
+    title: "应用图标",
+    description: "PWA 与桌面入口图标",
+    src: "/icon.png",
+    downloadName: "lonear-icon.png",
+    meta: "512 x 512 · PNG",
+  },
+];
+const defaultImagePreviewState: ImagePreviewState = {
+  scale: 1,
+  rotation: 0,
+  offsetX: 0,
+  offsetY: 0,
+};
 
 function ComponentShowcasePage() {
   const message = useLonMessage();
   const notification = useLonNotification();
   const [activeModal, setActiveModal] = useState<ShowcaseModalType>(null);
   const [activeDrawer, setActiveDrawer] = useState<ShowcaseDrawerType>(null);
+  const [previewImage, setPreviewImage] = useState<ShowcaseImage | null>(null);
+  const [imagePreviewState, setImagePreviewState] = useState<ImagePreviewState>(defaultImagePreviewState);
+  const [imageDragOrigin, setImageDragOrigin] = useState<ImageDragOrigin | null>(null);
+  const [selectedTags, setSelectedTags] = useState<string[]>(["内容运营", "权限审计"]);
+  const [closableTags, setClosableTags] = useState<ShowcaseTag[]>(initialClosableTags);
   const [formValues, setFormValues] = useState<ShowcaseFormValues>({
     title: "运营权限复核",
     quota: 12,
@@ -126,6 +242,84 @@ function ComponentShowcasePage() {
     });
     setFiles([]);
     setFormNotice("表单已重置");
+  }
+
+  function toggleSelectedTag(label: string) {
+    setSelectedTags((currentTags) =>
+      currentTags.includes(label) ? currentTags.filter((tag) => tag !== label) : [...currentTags, label],
+    );
+  }
+
+  function removeClosableTag(label: string) {
+    setClosableTags((currentTags) => currentTags.filter((tag) => tag.label !== label));
+  }
+
+  function openImagePreview(image: ShowcaseImage) {
+    setPreviewImage(image);
+    setImagePreviewState(defaultImagePreviewState);
+    setImageDragOrigin(null);
+  }
+
+  function closeImagePreview() {
+    setPreviewImage(null);
+    setImagePreviewState(defaultImagePreviewState);
+    setImageDragOrigin(null);
+  }
+
+  function updatePreviewScale(delta: number) {
+    setImagePreviewState((currentState) => ({
+      ...currentState,
+      scale: Math.min(2.5, Math.max(0.5, Number((currentState.scale + delta).toFixed(2)))),
+    }));
+  }
+
+  function rotatePreview(delta: number) {
+    setImagePreviewState((currentState) => ({
+      ...currentState,
+      rotation: currentState.rotation + delta,
+    }));
+  }
+
+  function resetImagePreview() {
+    setImagePreviewState(defaultImagePreviewState);
+    setImageDragOrigin(null);
+  }
+
+  function startImageDrag(event: PointerEvent<HTMLDivElement>) {
+    if (event.pointerType === "mouse" && event.button !== 0) {
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setImageDragOrigin({
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      offsetX: imagePreviewState.offsetX,
+      offsetY: imagePreviewState.offsetY,
+    });
+  }
+
+  function updateImageDrag(event: PointerEvent<HTMLDivElement>) {
+    if (!imageDragOrigin || imageDragOrigin.pointerId !== event.pointerId) {
+      return;
+    }
+
+    setImagePreviewState((currentState) => ({
+      ...currentState,
+      offsetX: imageDragOrigin.offsetX + event.clientX - imageDragOrigin.startX,
+      offsetY: imageDragOrigin.offsetY + event.clientY - imageDragOrigin.startY,
+    }));
+  }
+
+  function stopImageDrag(event: PointerEvent<HTMLDivElement>) {
+    if (!imageDragOrigin || imageDragOrigin.pointerId !== event.pointerId) {
+      return;
+    }
+
+    event.currentTarget.releasePointerCapture(event.pointerId);
+    setImageDragOrigin(null);
   }
 
   return (
@@ -298,6 +492,97 @@ function ComponentShowcasePage() {
         </div>
       </section>
 
+      <section className="admin-panel tag-showcase-panel">
+        <PanelHeader icon={Tags} title="Tag 标签" action={`${selectedTags.length} 个已选`} />
+        <div className="tag-showcase-grid">
+          {showcaseTagRows.map((row) => (
+            <article className="tag-showcase-row" key={row.title}>
+              <div className="button-showcase-meta">
+                <strong>{row.title}</strong>
+                <span>{row.description}</span>
+              </div>
+              <div className="tag-state-list">
+                {row.tags.map((tag) => (
+                  <LonTag
+                    disabled={tag.disabled}
+                    dot={tag.dot}
+                    key={`${row.title}-${tag.label}`}
+                    selected={tag.selected}
+                    tone={tag.tone}
+                  >
+                    {tag.label}
+                  </LonTag>
+                ))}
+              </div>
+            </article>
+          ))}
+          <article className="tag-showcase-row">
+            <div className="button-showcase-meta">
+              <strong>可选择标签</strong>
+              <span>适合筛选项、批量标记和轻量偏好</span>
+            </div>
+            <div className="tag-state-list">
+              {selectableTagOptions.map((tag) => (
+                <LonTag
+                  key={tag.label}
+                  selected={selectedTags.includes(tag.label)}
+                  tone={tag.tone}
+                  onClick={() => toggleSelectedTag(tag.label)}
+                >
+                  {tag.label}
+                </LonTag>
+              ))}
+            </div>
+          </article>
+          <article className="tag-showcase-row">
+            <div className="button-showcase-meta">
+              <strong>可关闭标签</strong>
+              <span>适合动态筛选、临时分类和搜索条件</span>
+            </div>
+            <div className="tag-state-list">
+              {closableTags.length > 0 ? (
+                closableTags.map((tag) => (
+                  <LonTag
+                    closable
+                    closeLabel={`移除${tag.label}标签`}
+                    key={tag.label}
+                    tone={tag.tone}
+                    onClose={() => removeClosableTag(tag.label)}
+                  >
+                    {tag.label}
+                  </LonTag>
+                ))
+              ) : (
+                <span className="tag-showcase-empty">标签已清空</span>
+              )}
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section className="admin-panel image-showcase-panel">
+        <PanelHeader icon={ImageIcon} title="Image 图片" action="点击预览" />
+        <div className="image-showcase-grid">
+          {showcaseImages.map((image) => (
+            <button
+              className="image-showcase-card"
+              key={image.title}
+              type="button"
+              onClick={() => openImagePreview(image)}
+            >
+              <span className="image-showcase-thumb">
+                <img alt={image.title} src={image.src} />
+              </span>
+              <span className="image-showcase-info">
+                <strong>{image.title}</strong>
+                <span>{image.description}</span>
+                <small>{image.meta}</small>
+              </span>
+            </button>
+          ))}
+        </div>
+      </section>
+
       <section className="admin-panel form-showcase-panel">
         <PanelHeader icon={Settings} title="Form 表单组件" action={formNotice} />
         <form className="form-showcase-grid" onSubmit={handleFormSubmit}>
@@ -454,6 +739,96 @@ function ComponentShowcasePage() {
             <small>所属组织及下级组织</small>
           </li>
         </ul>
+      </LonModal>
+
+      <LonModal
+        open={Boolean(previewImage)}
+        title={previewImage?.title ?? "图片预览"}
+        description={previewImage?.meta}
+        size="large"
+        onClose={closeImagePreview}
+        footer={
+          <div className="image-preview-toolbar" aria-label="图片预览操作">
+            <button
+              aria-label="缩小图片"
+              className="image-preview-tool"
+              disabled={imagePreviewState.scale <= 0.5}
+              title="缩小"
+              type="button"
+              onClick={() => updatePreviewScale(-0.25)}
+            >
+              <ZoomOut size={15} strokeWidth={2.2} />
+            </button>
+            <span className="image-preview-scale">{Math.round(imagePreviewState.scale * 100)}%</span>
+            <button
+              aria-label="放大图片"
+              className="image-preview-tool"
+              disabled={imagePreviewState.scale >= 2.5}
+              title="放大"
+              type="button"
+              onClick={() => updatePreviewScale(0.25)}
+            >
+              <ZoomIn size={15} strokeWidth={2.2} />
+            </button>
+            <span className="image-preview-divider" aria-hidden="true" />
+            <button
+              aria-label="向左旋转"
+              className="image-preview-tool"
+              title="向左旋转"
+              type="button"
+              onClick={() => rotatePreview(-90)}
+            >
+              <RotateCcw size={15} strokeWidth={2.2} />
+            </button>
+            <button
+              aria-label="向右旋转"
+              className="image-preview-tool"
+              title="向右旋转"
+              type="button"
+              onClick={() => rotatePreview(90)}
+            >
+              <RotateCw size={15} strokeWidth={2.2} />
+            </button>
+            <span className="image-preview-divider" aria-hidden="true" />
+            <button
+              aria-label="重置预览"
+              className="image-preview-tool"
+              title="重置"
+              type="button"
+              onClick={resetImagePreview}
+            >
+              <RefreshCw size={15} strokeWidth={2.2} />
+            </button>
+            <a
+              aria-label="下载图片"
+              className="image-preview-tool"
+              download={previewImage?.downloadName}
+              href={previewImage?.src ?? "#"}
+              title="下载"
+            >
+              <Download size={15} strokeWidth={2.2} />
+            </a>
+          </div>
+        }
+      >
+        {previewImage ? (
+          <div
+            className={`image-preview-stage ${imageDragOrigin ? "is-dragging" : ""}`}
+            onPointerCancel={stopImageDrag}
+            onPointerDown={startImageDrag}
+            onPointerMove={updateImageDrag}
+            onPointerUp={stopImageDrag}
+          >
+            <img
+              alt={previewImage.title}
+              className="image-preview-media"
+              src={previewImage.src}
+              style={{
+                transform: `translate(${imagePreviewState.offsetX}px, ${imagePreviewState.offsetY}px) scale(${imagePreviewState.scale}) rotate(${imagePreviewState.rotation}deg)`,
+              }}
+            />
+          </div>
+        ) : null}
       </LonModal>
 
       <LonDrawer
