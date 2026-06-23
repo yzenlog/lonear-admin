@@ -1,11 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import AdminLayout from "../layouts/AdminLayout";
 import LoginPage from "../pages/auth/LoginPage";
+import type { ThemeMode } from "../config/app";
 import { moduleRoutes } from "../config/modules";
 import { AdminPageRoute } from "./adminPages";
-import { clearAuthSession, getInitialAuthState, persistAuthSession } from "../services/session";
+import {
+  clearAuthSession,
+  getInitialAuthState,
+  getInitialThemeMode,
+  getInitialUiSettings,
+  persistAuthSession,
+  syncThemeMode,
+} from "../services/session";
 import { getLoginRedirectPath, getProtectedLoginPath, moduleRouteEntries } from "../utils/navigation";
 
 function AppRoutes() {
@@ -19,7 +27,12 @@ function AppRoutes() {
   const [loginStatus, setLoginStatus] = useState<"idle" | "loading">("idle");
   const [loginError, setLoginError] = useState("");
   const [loginMessage, setLoginMessage] = useState("企业账号受保护，登录后进入当前工作区。");
+  const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode);
   const currentPath = `${location.pathname}${location.search}`;
+
+  useEffect(() => {
+    syncThemeMode(themeMode, getInitialUiSettings().accentColor);
+  }, [themeMode]);
 
   function updateLoginEmail(value: string) {
     setLoginEmail(value);
@@ -77,10 +90,12 @@ function AppRoutes() {
       status={loginStatus}
       error={loginError}
       message={loginMessage}
+      themeMode={themeMode}
       onEmailChange={updateLoginEmail}
       onPasswordChange={updateLoginPassword}
       onRememberChange={(checked) => setRememberSession(checked)}
       onTogglePassword={() => setShowPassword((visible) => !visible)}
+      onThemeModeToggle={() => setThemeMode((mode) => (mode === "dark" ? "light" : "dark"))}
       onRecoveryClick={handleRecovery}
       onSubmit={handleLogin}
     />
@@ -96,7 +111,15 @@ function AppRoutes() {
           isAuthenticated ? <Navigate to={getLoginRedirectPath(location.state, location.search)} replace /> : loginPage
         }
       />
-      <Route element={isAuthenticated ? <AdminLayout onLogout={handleLogout} /> : loginRedirect}>
+      <Route
+        element={
+          isAuthenticated ? (
+            <AdminLayout themeMode={themeMode} onThemeModeChange={setThemeMode} onLogout={handleLogout} />
+          ) : (
+            loginRedirect
+          )
+        }
+      >
         {moduleRouteEntries.map(([id, routePath]) => (
           <Route key={id} path={routePath} element={<AdminPageRoute moduleId={id} />} />
         ))}

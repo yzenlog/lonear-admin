@@ -1,5 +1,17 @@
 import type { FormEvent } from "react";
-import { ArrowRight, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail, ShieldCheck } from "lucide-react";
+import {
+  ArrowRight,
+  Eye,
+  EyeOff,
+  KeyRound,
+  LoaderCircle,
+  LockKeyhole,
+  Mail,
+  Moon,
+  ShieldCheck,
+  Sun,
+} from "lucide-react";
+import type { ThemeMode } from "../../config/app";
 import "./LoginPage.css";
 
 export type LoginPageProps = {
@@ -10,10 +22,12 @@ export type LoginPageProps = {
   status: "idle" | "loading";
   error: string;
   message: string;
+  themeMode: ThemeMode;
   onEmailChange: (value: string) => void;
   onPasswordChange: (value: string) => void;
   onRememberChange: (checked: boolean) => void;
   onTogglePassword: () => void;
+  onThemeModeToggle: () => void;
   onRecoveryClick: () => void;
   onSubmit: (event: FormEvent<HTMLFormElement>) => void;
 };
@@ -26,10 +40,12 @@ function LoginPage({
   status,
   error,
   message,
+  themeMode,
   onEmailChange,
   onPasswordChange,
   onRememberChange,
   onTogglePassword,
+  onThemeModeToggle,
   onRecoveryClick,
   onSubmit,
 }: LoginPageProps) {
@@ -38,16 +54,42 @@ function LoginPage({
 
   return (
     <main className="login-page">
+      <div className="login-page-actions">
+        <button
+          className={`login-theme-switch login-theme-switch-${themeMode}`}
+          type="button"
+          role="switch"
+          aria-checked={themeMode === "dark"}
+          aria-label={themeMode === "dark" ? "深色模式，点击切换为浅色模式" : "浅色模式，点击切换为深色模式"}
+          onClick={onThemeModeToggle}
+        >
+          <span className="login-theme-switch-icon login-theme-switch-icon-light" aria-hidden="true">
+            <Sun size={13} strokeWidth={2.2} />
+          </span>
+          <span className="login-theme-switch-icon login-theme-switch-icon-dark" aria-hidden="true">
+            <Moon size={13} strokeWidth={2.2} />
+          </span>
+          <span className="login-theme-switch-thumb" aria-hidden="true" />
+        </button>
+      </div>
+
       <section className="login-card" aria-label="登录表单">
         <header className="login-header">
-          <div className="login-brand">
-            <span className="login-logo" aria-hidden="true">
-              <img src="/logo.png" alt="" />
-            </span>
-            <span>
-              <strong>Lonear Admin</strong>
-              <span>管理后台</span>
-            </span>
+          <div className="login-card-top">
+            <div className="login-brand">
+              <span className="login-logo" aria-hidden="true">
+                <img src="/logo.png" alt="" />
+              </span>
+              <span className="login-brand-text">
+                <strong>Lonear Admin</strong>
+                <span>管理后台</span>
+              </span>
+            </div>
+
+            <div className="login-card-badge">
+              <KeyRound size={15} strokeWidth={2.2} />
+              <span>管理员登录</span>
+            </div>
           </div>
 
           <div className="login-copy">
@@ -130,7 +172,7 @@ function LoginPage({
 
         <footer className="login-footer-note">
           <ShieldCheck size={14} strokeWidth={2.1} />
-          <span>可在系统设置中启用单点登录与二次验证</span>
+          <span>安全验证后进入工作台</span>
         </footer>
       </section>
     </main>

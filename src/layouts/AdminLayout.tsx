@@ -8,7 +8,7 @@ import { moduleMeta, moduleRoutes, sections } from "../config/modules";
 import type { ModuleId, NavSection } from "../config/modules";
 import { moduleRecords } from "../mocks/managementRecords";
 import type { ManagementRecord } from "../mocks/managementRecords";
-import { getInitialThemeMode, getInitialUiSettings, persistUiSettings, syncThemeMode } from "../services/session";
+import { getInitialUiSettings, persistUiSettings, syncThemeMode } from "../services/session";
 import { getModuleIdFromPathname, getNavKeyForModule } from "../utils/navigation";
 import PageTabs from "../components/shared/page-tabs/PageTabs";
 import AppSidebar from "../components/shared/app-sidebar/AppSidebar";
@@ -16,6 +16,8 @@ import { LonDrawer } from "../components/ui";
 import "./AdminLayout.css";
 
 type AdminLayoutProps = {
+  themeMode: ThemeMode;
+  onThemeModeChange: (mode: ThemeMode) => void;
   onLogout: () => void;
 };
 
@@ -135,12 +137,11 @@ function getBreadcrumbItems(moduleId: ModuleId, scope: string, title: string) {
   }, []);
 }
 
-function AdminLayout({ onLogout }: AdminLayoutProps) {
+function AdminLayout({ themeMode, onThemeModeChange, onLogout }: AdminLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const activeModule = getModuleIdFromPathname(location.pathname) ?? "dashboard";
   const [menuQuery, setMenuQuery] = useState("");
-  const [themeMode, setThemeMode] = useState<ThemeMode>(getInitialThemeMode);
   const [uiSettings, setUiSettings] = useState<UiSettings>(getInitialUiSettings);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
@@ -418,7 +419,7 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
   }
 
   function handleThemeModeChange(mode: ThemeMode) {
-    setThemeMode(mode);
+    onThemeModeChange(mode);
     setNotice(mode === "dark" ? "已切换为深色模式" : "已切换为浅色模式");
   }
 
