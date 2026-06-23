@@ -30,6 +30,8 @@
   --status-neutral-text: #4a4f59;
   --fixed-actions-shadow-color: rgba(16, 24, 40, 0.08);
   --fixed-actions-divider: rgba(16, 24, 40, 0.12);
+  --scrollbar-thumb: #ededed;
+  --scrollbar-thumb-hover: #ededed;
 }
 
 :root[data-theme="dark"] {
@@ -64,10 +66,25 @@
   --status-neutral-text: #b7bec9;
   --fixed-actions-shadow-color: rgba(0, 0, 0, 0.24);
   --fixed-actions-divider: rgba(255, 255, 255, 0.1);
+  --scrollbar-thumb: var(--border-strong);
+  --scrollbar-thumb-hover: var(--text-dim);
 }
 
 * {
   box-sizing: border-box;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 html,
@@ -792,7 +809,7 @@ button {
   min-height: 0;
   flex: 1 1 auto;
   overflow: auto;
-  scrollbar-color: var(--border-strong) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
   scrollbar-width: thin;
 }
 
@@ -811,13 +828,13 @@ button {
 .role-page .table-scroll::-webkit-scrollbar-thumb {
   border: 1px solid var(--panel-bg);
   border-radius: 999px;
-  background: var(--border-strong);
+  background: var(--scrollbar-thumb);
   background-clip: padding-box;
 }
 
 .search-table-page .table-scroll::-webkit-scrollbar-thumb:hover,
 .role-page .table-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--text-dim);
+  background: var(--scrollbar-thumb-hover);
   background-clip: padding-box;
 }
 

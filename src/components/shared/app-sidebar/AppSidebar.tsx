@@ -4,13 +4,17 @@ import {
   Check,
   ChevronDown,
   Command,
+  IdCard,
+  KeyRound,
   ListPlus,
   LocateFixed,
   LogOut,
+  Mail,
   MoreHorizontal,
   Plus,
   Search,
   Settings,
+  ShieldCheck,
   UserRound,
 } from "lucide-react";
 import type { CurrentUser } from "../../../api/auth";
@@ -75,8 +79,13 @@ function AppSidebar({
   const isFiltering = normalizedQuery.length > 0;
   const visibleSections = useMemo(() => filterNavSections(sections, normalizedQuery), [sections, normalizedQuery]);
   const userName = currentUser?.name.trim() || "未登录用户";
-  const userStatus = currentUser?.email?.trim() || "在线";
+  const userEmail = currentUser?.email?.trim();
+  const userStatus = userEmail || (currentUser ? "在线" : "未登录");
   const userInitials = getUserInitials(userName);
+  const userRoleLabel = getUserRoleLabel(currentUser?.roles);
+  const permissionSummary = getPermissionSummary(currentUser?.permissions);
+  const accountId = currentUser?.id ?? "guest-session";
+  const avatarColor = currentUser ? "var(--accent)" : "var(--text-dim)";
 
   return (
     <aside className="sidebar" aria-label="主导航">
@@ -187,12 +196,19 @@ function AppSidebar({
       </div>
 
       <div className="sidebar-footer" ref={userMenuRef}>
-        <button className="sidebar-user" type="button" onClick={() => onUserMenuAction("个人资料")}>
-          <UserAvatar initials={userInitials} color="#1066cc" />
+        <button
+          className={`sidebar-user ${userMenuOpen ? "active" : ""}`}
+          type="button"
+          aria-label="打开个人资料弹窗"
+          aria-haspopup="dialog"
+          aria-expanded={userMenuOpen}
+          onClick={onUserMenuToggle}
+        >
+          <UserAvatar alt={`${userName}头像`} initials={userInitials} color={avatarColor} src={currentUser?.avatar} />
           <span className="user-info">
             <span className="user-name">{userName}</span>
             <span className="user-status">
-              <span className="status-dot" />
+              <span className={`status-dot ${currentUser ? "" : "offline"}`} />
               {userStatus}
             </span>
           </span>
@@ -200,8 +216,8 @@ function AppSidebar({
         <button
           className={`footer-menu-btn ${userMenuOpen ? "active" : ""}`}
           type="button"
-          aria-label="打开个人菜单"
-          aria-haspopup="menu"
+          aria-label="打开个人资料弹窗"
+          aria-haspopup="dialog"
           aria-expanded={userMenuOpen}
           onClick={onUserMenuToggle}
         >
@@ -209,18 +225,74 @@ function AppSidebar({
         </button>
 
         {userMenuOpen ? (
-          <div className="user-menu-popover" role="menu" aria-label="个人菜单">
-            <button type="button" role="menuitem" onClick={() => onUserMenuAction("个人资料")}>
-              <UserRound size={14} strokeWidth={2.1} />
-              个人资料
+          <div className="user-menu-popover" role="dialog" aria-label="个人资料弹窗">
+            <div className="user-profile-card">
+              <UserAvatar
+                alt={`${userName}头像`}
+                initials={userInitials}
+                color={avatarColor}
+                size="large"
+                src={currentUser?.avatar}
+              />
+              <span className="user-profile-title">
+                <strong>{userName}</strong>
+                <span>
+                  <Mail size={12} strokeWidth={2.2} aria-hidden="true" />
+                  {userEmail ?? "尚未绑定邮箱"}
+                </span>
+              </span>
+              <span className={`user-profile-state ${currentUser ? "" : "offline"}`}>
+                <span aria-hidden="true" />
+                {currentUser ? "在线" : "未登录"}
+              </span>
+            </div>
+
+            <div className="user-profile-meta" aria-label="账号摘要">
+              <span className="user-profile-meta-item">
+                <ShieldCheck size={14} strokeWidth={2.2} aria-hidden="true" />
+                <span>
+                  <small>当前角色</small>
+                  <strong>{userRoleLabel}</strong>
+                </span>
+              </span>
+              <span className="user-profile-meta-item">
+                <KeyRound size={14} strokeWidth={2.2} aria-hidden="true" />
+                <span>
+                  <small>权限范围</small>
+                  <strong>{permissionSummary}</strong>
+                </span>
+              </span>
+              <span className="user-profile-meta-item">
+                <IdCard size={14} strokeWidth={2.2} aria-hidden="true" />
+                <span>
+                  <small>账号 ID</small>
+                  <strong>{accountId}</strong>
+                </span>
+              </span>
+            </div>
+
+            <div className="user-menu-separator" />
+
+            <button className="user-menu-action" type="button" onClick={() => onUserMenuAction("个人资料")}>
+              <UserRound size={15} strokeWidth={2.1} aria-hidden="true" />
+              <span>
+                <strong>个人资料</strong>
+                <small>查看昵称、头像与联系信息</small>
+              </span>
             </button>
-            <button type="button" role="menuitem" onClick={() => onUserMenuAction("账号设置")}>
-              <Settings size={14} strokeWidth={2.1} />
-              账号设置
+            <button className="user-menu-action" type="button" onClick={() => onUserMenuAction("账号设置")}>
+              <Settings size={15} strokeWidth={2.1} aria-hidden="true" />
+              <span>
+                <strong>账号设置</strong>
+                <small>安全、偏好与登录状态</small>
+              </span>
             </button>
-            <button className="danger" type="button" role="menuitem" onClick={onLogout}>
-              <LogOut size={14} strokeWidth={2.1} />
-              退出登录
+            <button className="user-menu-action danger" type="button" onClick={onLogout}>
+              <LogOut size={15} strokeWidth={2.1} aria-hidden="true" />
+              <span>
+                <strong>退出登录</strong>
+                <small>结束当前浏览器会话</small>
+              </span>
             </button>
           </div>
         ) : null}
@@ -237,6 +309,36 @@ function getUserInitials(name: string) {
   }
 
   return Array.from(name.replace(/\s+/g, "")).slice(0, 2).join("").toUpperCase() || "U";
+}
+
+function getUserRoleLabel(roles?: string[]) {
+  if (!roles || roles.length === 0) {
+    return "默认角色";
+  }
+
+  const roleLabelMap: Record<string, string> = {
+    admin: "管理员",
+    editor: "编辑员",
+    operator: "运营人员",
+    "super-admin": "超级管理员",
+  };
+
+  return roles
+    .map((role) => roleLabelMap[role] ?? role)
+    .filter(Boolean)
+    .join("、");
+}
+
+function getPermissionSummary(permissions?: string[]) {
+  if (!permissions || permissions.length === 0) {
+    return "基础权限";
+  }
+
+  if (permissions.includes("*")) {
+    return "全部权限";
+  }
+
+  return `${permissions.length} 项权限`;
 }
 
 function filterNavSections(sections: NavSection[], query: string) {

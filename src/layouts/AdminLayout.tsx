@@ -1,15 +1,17 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { Bell, Check, ChevronRight, Layers, Menu, Moon, Palette, Settings, Sun } from "lucide-react";
+import { Bell, Check, ChevronRight, Layers, LayoutPanelTop, Menu, Moon, Palette, Settings, Sun } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { ACCENT_COLOR_OPTIONS, PAGE_TABS_STYLE_OPTIONS, TAB_STATE_STORAGE_KEY } from "../config/app";
-import type { AccentColor, PageTabsStyle, ThemeMode, UiSettings } from "../config/app";
-import { moduleMeta, moduleRoutes, sections } from "../config/modules";
+import { getCurrentUserMenuTree } from "../api/system/menu";
+import { ACCENT_COLOR_OPTIONS, MAIN_AREA_STYLE_OPTIONS, PAGE_TABS_STYLE_OPTIONS, TAB_STATE_STORAGE_KEY } from "../config/app";
+import type { AccentColor, MainAreaStyle, PageTabsStyle, ThemeMode, UiSettings } from "../config/app";
+import { moduleMeta, moduleRoutes, sections as defaultSections } from "../config/modules";
 import type { ModuleId, NavSection } from "../config/modules";
 import { moduleRecords } from "../mocks/managementRecords";
 import type { ManagementRecord } from "../mocks/managementRecords";
 import type { CurrentUser } from "../api/auth";
 import { getInitialUiSettings, persistUiSettings, syncThemeMode } from "../services/session";
+import { menuTreeToNavSections } from "../utils/menuNavigation";
 import { getModuleIdFromPathname, getNavKeyForModule } from "../utils/navigation";
 import PageTabs from "../components/shared/page-tabs/PageTabs";
 import AppSidebar from "../components/shared/app-sidebar/AppSidebar";
@@ -119,12 +121,12 @@ function getExpandedSidebarState(navSections: NavSection[]) {
   );
 }
 
-function isStandaloneModule(moduleId: ModuleId) {
-  return sections.some((section) => section.standalone && section.items?.some((item) => item.id === moduleId));
+function isStandaloneModule(moduleId: ModuleId, navSections: NavSection[]) {
+  return navSections.some((section) => section.standalone && section.items?.some((item) => item.id === moduleId));
 }
 
-function getBreadcrumbItems(moduleId: ModuleId, scope: string, title: string) {
-  if (isStandaloneModule(moduleId)) {
+function getBreadcrumbItems(moduleId: ModuleId, scope: string, title: string, navSections: NavSection[]) {
+  if (isStandaloneModule(moduleId, navSections)) {
     return [title];
   }
 
@@ -159,15 +161,16 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [navSections, setNavSections] = useState<NavSection[]>(defaultSections);
   const [openTabs, setOpenTabs] = useState<ModuleId[]>(() => getInitialOpenTabs(activeModule));
   const [contentRefreshKey, setContentRefreshKey] = useState(0);
   const searchRef = useRef<HTMLInputElement>(null);
   const workspaceMenuRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationMenuRef = useRef<HTMLDivElement>(null);
-  const activeNavKey = useMemo(() => getNavKeyForModule(activeModule), [activeModule]);
+  const activeNavKey = useMemo(() => getNavKeyForModule(activeModule, navSections), [activeModule, navSections]);
   const meta = moduleMeta[activeModule];
-  const breadcrumbItems = getBreadcrumbItems(activeModule, meta.scope, meta.title);
+  const breadcrumbItems = getBreadcrumbItems(activeModule, meta.scope, meta.title, navSections);
   const notificationItems = useMemo<TopbarNotification[]>(() => {
     const inboxItems = moduleRecords.messages.map((record, index) => ({
       ...record,
@@ -187,6 +190,33 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
     return [...inboxItems, ...noticeItems].slice(0, 6);
   }, []);
   const unreadNotificationCount = notificationItems.filter((item) => item.unread).length;
+
+  useEffect(() => {
+    let ignore = false;
+
+    void getCurrentUserMenuTree()
+      .then((menuTree) => {
+        if (ignore) {
+          return;
+        }
+
+        const nextSections = menuTreeToNavSections(menuTree);
+
+        setNavSections(nextSections.length > 0 ? nextSections : defaultSections);
+      })
+      .catch(() => {
+        if (ignore) {
+          return;
+        }
+
+        setNavSections(defaultSections);
+        setNotice("菜单加载失败，已使用本地菜单");
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [currentUser?.id]);
 
   useEffect(() => {
     syncThemeMode(themeMode, uiSettings.accentColor);
@@ -309,7 +339,7 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
   }
 
   function expandAllMenus() {
-    const expandedSidebarState = getExpandedSidebarState(sections);
+    const expandedSidebarState = getExpandedSidebarState(navSections);
 
     setMenuQuery("");
     setCollapsedSections(expandedSidebarState.sections);
@@ -321,7 +351,7 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
   }
 
   function focusActiveMenu() {
-    const focusedSidebarState = getFocusedSidebarState(sections, activeNavKey);
+    const focusedSidebarState = getFocusedSidebarState(navSections, activeNavKey);
 
     setMenuQuery("");
     setCollapsedSections(focusedSidebarState.sections);
@@ -478,6 +508,16 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
     setNotice(`标签风格已切换为${tabsStyleOption?.label ?? "默认"}`);
   }
 
+  function handleMainAreaStyleChange(mainAreaStyle: MainAreaStyle) {
+    const mainAreaStyleOption = MAIN_AREA_STYLE_OPTIONS.find((option) => option.id === mainAreaStyle);
+
+    setUiSettings((currentSettings) => ({
+      ...currentSettings,
+      mainAreaStyle,
+    }));
+    setNotice(`主区风格已切换为${mainAreaStyleOption?.label ?? "传统"}`);
+  }
+
   function handleSectionQuickAdd(section: NavSection) {
     setNotice(`${section.title}快捷新增入口已打开`);
   }
@@ -524,9 +564,9 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
   }
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell app-shell-${uiSettings.mainAreaStyle}`}>
       <AppSidebar
-        sections={sections}
+        sections={navSections}
         activeNavKey={activeNavKey}
         query={menuQuery}
         workspaceOpen={workspaceOpen}
@@ -563,113 +603,131 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
       />
 
       <main className="main-panel">
-        <header className="topbar">
-          <button className="mobile-menu icon-btn" type="button" aria-label="打开菜单">
-            <Menu size={17} strokeWidth={2.1} />
-          </button>
-          <div className="breadcrumb" aria-label="当前位置">
-            {breadcrumbItems.map((item, index) => (
-              <Fragment key={`${item}-${index}`}>
-                {index > 0 ? <span className="sep">/</span> : null}
-                <span className={index === breadcrumbItems.length - 1 ? undefined : "crumb-muted"}>{item}</span>
-              </Fragment>
-            ))}
-          </div>
-          <div className="topbar-actions">
-            {uiSettings.showNotice ? <span className="notice">{notice}</span> : null}
-            <div className="notification-wrap" ref={notificationMenuRef}>
-              <button
-                className={`icon-btn notification-trigger ${notificationOpen ? "active" : ""}`}
-                type="button"
-                aria-label={`查看通知，${unreadNotificationCount} 条未读`}
-                aria-haspopup="menu"
-                aria-expanded={notificationOpen}
-                onClick={handleNotificationToggle}
-              >
-                <Bell size={17} strokeWidth={2.1} />
-                {unreadNotificationCount > 0 ? (
-                  <span className="notification-badge" aria-hidden="true">
-                    {unreadNotificationCount}
-                  </span>
-                ) : null}
-              </button>
-              {notificationOpen ? (
-                <div className="notification-popover" role="menu" aria-label="最新通知">
-                  <div className="notification-popover-head">
-                    <div>
-                      <strong>最新通知</strong>
-                      <span>最近 {notificationItems.length} 条更新</span>
-                    </div>
-                  </div>
-                  <div className="notification-list">
-                    {notificationItems.map((item) => {
-                      const SourceIcon = moduleMeta[item.moduleId].icon;
-
-                      return (
-                        <button
-                          className={`notification-item ${item.unread ? "unread" : ""}`}
-                          type="button"
-                          role="menuitem"
-                          key={item.id}
-                          onClick={() => handleNotificationOpen(item)}
-                        >
-                          <span className={`notification-source ${item.tone}`} aria-hidden="true">
-                            <SourceIcon size={14} strokeWidth={2.2} />
-                          </span>
-                          <span className="notification-copy">
-                            <span className="notification-title-line">
-                              <strong>{item.title}</strong>
-                              <span>{item.updated}</span>
-                            </span>
-                            <span className="notification-description">{item.description}</span>
-                            <span className="notification-meta-line">
-                              <span>{item.sourceLabel}</span>
-                              <span>{item.status}</span>
-                            </span>
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <button
-                    className="notification-more"
-                    type="button"
-                    role="menuitem"
-                    onClick={handleViewMoreNotifications}
-                  >
-                    查看更多
-                    <ChevronRight size={14} strokeWidth={2.2} />
-                  </button>
-                </div>
-              ) : null}
+        <div className="main-area-frame">
+          <header className="topbar">
+            <button className="mobile-menu icon-btn" type="button" aria-label="打开菜单">
+              <Menu size={17} strokeWidth={2.1} />
+            </button>
+            <div className="breadcrumb" aria-label="当前位置">
+              {breadcrumbItems.map((item, index) => (
+                <Fragment key={`${item}-${index}`}>
+                  {index > 0 ? <span className="sep">/</span> : null}
+                  <span className={index === breadcrumbItems.length - 1 ? undefined : "crumb-muted"}>{item}</span>
+                </Fragment>
+              ))}
             </div>
-            <button
-              className={`icon-btn settings-trigger ${settingsOpen ? "active" : ""}`}
-              type="button"
-              aria-label="系统设置"
-              aria-expanded={settingsOpen}
-              onClick={handleSettingsToggle}
-            >
-              <Settings size={17} strokeWidth={2.1} />
-            </button>
-            <button
-              className={`theme-switch theme-switch-${themeMode}`}
-              type="button"
-              role="switch"
-              aria-checked={themeMode === "dark"}
-              aria-label={themeMode === "dark" ? "深色模式，点击切换为浅色模式" : "浅色模式，点击切换为深色模式"}
-              onClick={handleThemeModeToggle}
-            >
-              <span className="theme-switch-icon theme-switch-icon-light" aria-hidden="true">
-                <Sun size={13} strokeWidth={2.2} />
-              </span>
-              <span className="theme-switch-icon theme-switch-icon-dark" aria-hidden="true">
-                <Moon size={13} strokeWidth={2.2} />
-              </span>
-              <span className="theme-switch-thumb" aria-hidden="true" />
-            </button>
+            <div className="topbar-actions">
+              {uiSettings.showNotice ? <span className="notice">{notice}</span> : null}
+              <div className="notification-wrap" ref={notificationMenuRef}>
+                <button
+                  className={`icon-btn notification-trigger ${notificationOpen ? "active" : ""}`}
+                  type="button"
+                  aria-label={`查看通知，${unreadNotificationCount} 条未读`}
+                  aria-haspopup="menu"
+                  aria-expanded={notificationOpen}
+                  onClick={handleNotificationToggle}
+                >
+                  <Bell size={17} strokeWidth={2.1} />
+                  {unreadNotificationCount > 0 ? (
+                    <span className="notification-badge" aria-hidden="true">
+                      {unreadNotificationCount}
+                    </span>
+                  ) : null}
+                </button>
+                {notificationOpen ? (
+                  <div className="notification-popover" role="menu" aria-label="最新通知">
+                    <div className="notification-popover-head">
+                      <div>
+                        <strong>最新通知</strong>
+                        <span>最近 {notificationItems.length} 条更新</span>
+                      </div>
+                    </div>
+                    <div className="notification-list">
+                      {notificationItems.map((item) => {
+                        const SourceIcon = moduleMeta[item.moduleId].icon;
+
+                        return (
+                          <button
+                            className={`notification-item ${item.unread ? "unread" : ""}`}
+                            type="button"
+                            role="menuitem"
+                            key={item.id}
+                            onClick={() => handleNotificationOpen(item)}
+                          >
+                            <span className={`notification-source ${item.tone}`} aria-hidden="true">
+                              <SourceIcon size={14} strokeWidth={2.2} />
+                            </span>
+                            <span className="notification-copy">
+                              <span className="notification-title-line">
+                                <strong>{item.title}</strong>
+                                <span>{item.updated}</span>
+                              </span>
+                              <span className="notification-description">{item.description}</span>
+                              <span className="notification-meta-line">
+                                <span>{item.sourceLabel}</span>
+                                <span>{item.status}</span>
+                              </span>
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      className="notification-more"
+                      type="button"
+                      role="menuitem"
+                      onClick={handleViewMoreNotifications}
+                    >
+                      查看更多
+                      <ChevronRight size={14} strokeWidth={2.2} />
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+              <button
+                className={`icon-btn settings-trigger ${settingsOpen ? "active" : ""}`}
+                type="button"
+                aria-label="系统设置"
+                aria-expanded={settingsOpen}
+                onClick={handleSettingsToggle}
+              >
+                <Settings size={17} strokeWidth={2.1} />
+              </button>
+              <button
+                className={`theme-switch theme-switch-${themeMode}`}
+                type="button"
+                role="switch"
+                aria-checked={themeMode === "dark"}
+                aria-label={themeMode === "dark" ? "深色模式，点击切换为浅色模式" : "浅色模式，点击切换为深色模式"}
+                onClick={handleThemeModeToggle}
+              >
+                <span className="theme-switch-icon theme-switch-icon-light" aria-hidden="true">
+                  <Sun size={13} strokeWidth={2.2} />
+                </span>
+                <span className="theme-switch-icon theme-switch-icon-dark" aria-hidden="true">
+                  <Moon size={13} strokeWidth={2.2} />
+                </span>
+                <span className="theme-switch-thumb" aria-hidden="true" />
+              </button>
+            </div>
+          </header>
+
+          <PageTabs
+            tabs={openTabs}
+            activeModule={activeModule}
+            styleVariant={uiSettings.pageTabsStyle}
+            onSelect={selectTab}
+            onRefresh={refreshTab}
+            onClose={closeTab}
+            onCloseOthers={closeOtherTabs}
+            onCloseRight={closeRightTabs}
+            onCloseAll={closeAllTabs}
+          />
+
+          <div className="admin-content">
+            <Outlet key={`${location.pathname}-${contentRefreshKey}`} />
           </div>
-        </header>
+        </div>
 
         <LonDrawer
           open={settingsOpen}
@@ -712,6 +770,40 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
                   <span />
                 </span>
               </button>
+            </section>
+
+            <section className="settings-section" aria-labelledby="settings-main-area-style-title">
+              <div className="settings-section-head">
+                <LayoutPanelTop size={15} strokeWidth={2.2} aria-hidden="true" />
+                <h3 id="settings-main-area-style-title">主区风格</h3>
+              </div>
+              <div className="main-style-grid" role="radiogroup" aria-label="主区风格">
+                {MAIN_AREA_STYLE_OPTIONS.map((option) => {
+                  const active = uiSettings.mainAreaStyle === option.id;
+
+                  return (
+                    <button
+                      className={`main-style-option ${active ? "active" : ""}`}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      key={option.id}
+                      onClick={() => handleMainAreaStyleChange(option.id)}
+                    >
+                      <span className={`main-style-preview main-style-preview-${option.id}`} aria-hidden="true">
+                        <span />
+                        <span />
+                        <span />
+                      </span>
+                      <span className="main-style-copy">
+                        <strong>{option.label}</strong>
+                        <small>{option.description}</small>
+                      </span>
+                      {active ? <Check size={14} strokeWidth={2.3} /> : null}
+                    </button>
+                  );
+                })}
+              </div>
             </section>
 
             <section className="settings-section" aria-labelledby="settings-tabs-style-title">
@@ -773,22 +865,6 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
             </section>
           </div>
         </LonDrawer>
-
-        <PageTabs
-          tabs={openTabs}
-          activeModule={activeModule}
-          styleVariant={uiSettings.pageTabsStyle}
-          onSelect={selectTab}
-          onRefresh={refreshTab}
-          onClose={closeTab}
-          onCloseOthers={closeOtherTabs}
-          onCloseRight={closeRightTabs}
-          onCloseAll={closeAllTabs}
-        />
-
-        <div className="admin-content">
-          <Outlet key={`${location.pathname}-${contentRefreshKey}`} />
-        </div>
       </main>
     </div>
   );

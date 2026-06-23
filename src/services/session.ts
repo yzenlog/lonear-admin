@@ -3,11 +3,12 @@ import {
   AUTH_STORAGE_KEY,
   AUTH_USER_STORAGE_KEY,
   DEFAULT_UI_SETTINGS,
+  MAIN_AREA_STYLE_OPTIONS,
   PAGE_TABS_STYLE_OPTIONS,
   THEME_STORAGE_KEY,
   UI_SETTINGS_STORAGE_KEY,
 } from "../config/app";
-import type { AccentColor, PageTabsStyle, ThemeMode, UiSettings } from "../config/app";
+import type { AccentColor, MainAreaStyle, PageTabsStyle, ThemeMode, UiSettings } from "../config/app";
 import type { CurrentUser } from "../api/auth";
 import { clearApiTokens, getAccessToken } from "./apiTokens";
 
@@ -133,6 +134,12 @@ function normalizePageTabsStyle(value: unknown): PageTabsStyle {
     : DEFAULT_UI_SETTINGS.pageTabsStyle;
 }
 
+function normalizeMainAreaStyle(value: unknown): MainAreaStyle {
+  return typeof value === "string" && MAIN_AREA_STYLE_OPTIONS.some((option) => option.id === value)
+    ? (value as MainAreaStyle)
+    : DEFAULT_UI_SETTINGS.mainAreaStyle;
+}
+
 export function getInitialUiSettings(): UiSettings {
   if (typeof window === "undefined") {
     return DEFAULT_UI_SETTINGS;
@@ -145,6 +152,7 @@ export function getInitialUiSettings(): UiSettings {
       ? parsedSettings.accentColor
       : DEFAULT_UI_SETTINGS.accentColor;
     const pageTabsStyle = normalizePageTabsStyle(parsedSettings.pageTabsStyle);
+    const mainAreaStyle = normalizeMainAreaStyle(parsedSettings.mainAreaStyle);
 
     return {
       tabsPersistent:
@@ -155,6 +163,7 @@ export function getInitialUiSettings(): UiSettings {
         typeof parsedSettings.showNotice === "boolean" ? parsedSettings.showNotice : DEFAULT_UI_SETTINGS.showNotice,
       accentColor,
       pageTabsStyle,
+      mainAreaStyle,
     };
   } catch {
     return DEFAULT_UI_SETTINGS;

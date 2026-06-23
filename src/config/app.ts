@@ -8,6 +8,7 @@ export const DASHBOARD_NAV_KEY = "section:dashboard:dashboard:工作台";
 export type ThemeMode = "light" | "dark";
 export type AccentColor = "blue" | "green" | "purple" | "rose";
 export type PageTabsStyle = "default" | "underline" | "chrome";
+export type MainAreaStyle = "classic" | "linear";
 
 type AccentTokens = {
   accent: string;
@@ -29,6 +30,7 @@ export type UiSettings = {
   showNotice: boolean;
   accentColor: AccentColor;
   pageTabsStyle: PageTabsStyle;
+  mainAreaStyle: MainAreaStyle;
 };
 
 export const DEFAULT_UI_SETTINGS: UiSettings = {
@@ -36,6 +38,7 @@ export const DEFAULT_UI_SETTINGS: UiSettings = {
   showNotice: true,
   accentColor: "blue",
   pageTabsStyle: "default",
+  mainAreaStyle: "classic",
 };
 
 export const PAGE_TABS_STYLE_OPTIONS: Array<{
@@ -57,6 +60,23 @@ export const PAGE_TABS_STYLE_OPTIONS: Array<{
     id: "chrome",
     label: "Chrome",
     description: "贴底圆角标签",
+  },
+];
+
+export const MAIN_AREA_STYLE_OPTIONS: Array<{
+  id: MainAreaStyle;
+  label: string;
+  description: string;
+}> = [
+  {
+    id: "classic",
+    label: "传统",
+    description: "沿用当前后台布局",
+  },
+  {
+    id: "linear",
+    label: "Linear",
+    description: "圆角主区包裹面包屑与内容",
   },
 ];
 

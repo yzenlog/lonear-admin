@@ -22,6 +22,10 @@ export function getMenuTree() {
   return apiClient.get<MenuApiRecord[]>("/system/menus/tree");
 }
 
+export function getCurrentUserMenuTree() {
+  return apiClient.get<MenuApiRecord[]>("/auth/menus");
+}
+
 export function createMenu(payload: MenuMutationPayload) {
   return apiClient.post<MenuApiRecord>("/system/menus", payload);
 }

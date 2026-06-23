@@ -143,6 +143,16 @@ function findMenu(records: MenuApiRecord[], id: string): MenuApiRecord | null {
   return null;
 }
 
+function getEnabledMenus(records: MenuApiRecord[]): MenuApiRecord[] {
+  return records
+    .filter((record) => record.status === "enabled")
+    .map((record) => ({
+      ...record,
+      children: record.children ? getEnabledMenus(record.children) : undefined,
+    }))
+    .filter((record) => !record.children || record.children.length > 0 || Boolean(record.path));
+}
+
 function removeMenu(records: MenuApiRecord[], id: string): MenuApiRecord[] {
   return records
     .filter((record) => record.id !== id)
@@ -239,6 +249,15 @@ export const mockHandlers: MockHandler[] = [
       await wait();
 
       return jsonResponse(currentUser);
+    },
+  },
+  {
+    method: "GET",
+    path: /^\/(?:api\/)?auth\/menus$/,
+    resolver: async () => {
+      await wait();
+
+      return jsonResponse(getEnabledMenus(menuRecords));
     },
   },
   {
@@ -365,4 +384,3 @@ export const mockHandlers: MockHandler[] = [
     },
   },
 ];
-

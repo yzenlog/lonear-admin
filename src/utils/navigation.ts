@@ -1,5 +1,5 @@
 import { moduleRoutes, sections } from "../config/modules";
-import type { ModuleId } from "../config/modules";
+import type { ModuleId, NavSection } from "../config/modules";
 import { DASHBOARD_NAV_KEY } from "../config/app";
 
 export const moduleRouteEntries = Object.entries(moduleRoutes) as Array<[ModuleId, string]>;
@@ -27,8 +27,8 @@ export function getModuleIdFromPathname(pathname: string) {
   return moduleRouteEntries.find(([, routePath]) => routePath === normalizedPathname)?.[0];
 }
 
-export function getNavKeyForModule(moduleId: ModuleId) {
-  for (const section of sections) {
+export function getNavKeyForModule(moduleId: ModuleId, navSections: NavSection[] = sections) {
+  for (const section of navSections) {
     const sectionItem = section.items?.find((item) => item.id === moduleId);
 
     if (sectionItem) {
