@@ -2,15 +2,20 @@ import { useState } from "react";
 import type { FormEvent, PointerEvent } from "react";
 import {
   Bell,
+  CircleAlert,
   Download,
+  FilterX,
   Image as ImageIcon,
   MoreHorizontal,
   PanelRight,
   RefreshCw,
   RotateCcw,
   RotateCw,
+  Send,
   Settings,
   Tags,
+  Trash2,
+  Undo2,
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
@@ -22,6 +27,7 @@ import {
   LonInput,
   LonModal,
   LonNumberInput,
+  LonPopconfirm,
   LonRadioGroup,
   LonSelect,
   LonTag,
@@ -409,6 +415,64 @@ function ComponentShowcasePage() {
             >
               左侧常驻
             </LonButton>
+          </div>
+        </div>
+      </section>
+
+      <section className="admin-panel modal-showcase-panel">
+        <PanelHeader icon={CircleAlert} title="Popconfirm 气泡确认框" action="就地二次确认" />
+        <div className="modal-showcase-grid">
+          <div className="modal-showcase-copy">
+            <strong>轻量确认</strong>
+            <span>适合删除、发布、撤销等需要二次确认但不必打开弹窗的操作。</span>
+          </div>
+          <div className="button-state-list">
+            <LonPopconfirm
+              title="确认删除此条记录？"
+              description="删除后审计记录仍会保留，但业务数据不可恢复。"
+              okText="删除"
+              okButtonVariant="danger"
+              placement="top"
+              onConfirm={() => message.error("记录已删除")}
+            >
+              <LonButton variant="danger" leadingIcon={<Trash2 size={14} strokeWidth={2.2} />}>
+                删除记录
+              </LonButton>
+            </LonPopconfirm>
+            <LonPopconfirm
+              title="确认发布公告？"
+              description="发布后所有可见用户都会收到站内通知。"
+              okText="发布"
+              placement="bottom"
+              onConfirm={() => message.success("公告已发布")}
+            >
+              <LonButton variant="primary" leadingIcon={<Send size={14} strokeWidth={2.2} />}>
+                发布公告
+              </LonButton>
+            </LonPopconfirm>
+            <LonPopconfirm
+              title="撤销本次变更？"
+              description="未保存的字段调整会被恢复到上一次提交状态。"
+              okText="撤销"
+              okButtonVariant="danger"
+              placement="left"
+              onConfirm={() => message.warning("本次变更已撤销")}
+            >
+              <LonButton variant="secondary" leadingIcon={<Undo2 size={14} strokeWidth={2.2} />}>
+                左侧确认
+              </LonButton>
+            </LonPopconfirm>
+            <LonPopconfirm
+              title="清空筛选条件？"
+              description="当前页面的状态、组织和时间筛选会被清除。"
+              okText="清空"
+              placement="right"
+              onConfirm={() => message.info("筛选条件已清空")}
+            >
+              <LonButton variant="ghost" leadingIcon={<FilterX size={14} strokeWidth={2.2} />}>
+                右侧确认
+              </LonButton>
+            </LonPopconfirm>
           </div>
         </div>
       </section>

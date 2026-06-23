@@ -1,0 +1,126 @@
+.lon-popconfirm-trigger {
+  display: inline-flex;
+  max-width: 100%;
+}
+
+.lon-popconfirm {
+  position: fixed;
+  z-index: 940;
+  display: grid;
+  width: min(280px, calc(100vw - 24px));
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  animation: lon-popconfirm-enter 0.14s ease-out both;
+}
+
+.lon-popconfirm-content {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 9px;
+  min-width: 0;
+}
+
+.lon-popconfirm-icon {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border-radius: 7px;
+  background: rgba(224, 138, 0, 0.13);
+  color: var(--amber);
+}
+
+.lon-popconfirm-copy {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding-top: 1px;
+}
+
+.lon-popconfirm-title {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 18px;
+}
+
+.lon-popconfirm-description {
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 18px;
+}
+
+.lon-popconfirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.lon-popconfirm-actions .lon-button {
+  min-width: 58px;
+  height: 30px;
+}
+
+.lon-popconfirm-arrow {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  border: 1px solid var(--border);
+  background: var(--panel-bg);
+  pointer-events: none;
+}
+
+.lon-popconfirm-top .lon-popconfirm-arrow {
+  bottom: -6px;
+  left: var(--lon-popconfirm-arrow-left);
+  border-top: 0;
+  border-left: 0;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.lon-popconfirm-bottom .lon-popconfirm-arrow {
+  top: -6px;
+  left: var(--lon-popconfirm-arrow-left);
+  border-right: 0;
+  border-bottom: 0;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.lon-popconfirm-left .lon-popconfirm-arrow {
+  top: var(--lon-popconfirm-arrow-top);
+  right: -6px;
+  border-bottom: 0;
+  border-left: 0;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.lon-popconfirm-right .lon-popconfirm-arrow {
+  top: var(--lon-popconfirm-arrow-top);
+  left: -6px;
+  border-top: 0;
+  border-right: 0;
+  transform: translateY(-50%) rotate(45deg);
+}
+
+@keyframes lon-popconfirm-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 640px) {
+  .lon-popconfirm {
+    width: calc(100vw - 24px);
+  }
+}

@@ -28,3 +28,20 @@ export const contentHealth: Array<{ title: string; description: string; tone: St
   { title: "文章发布", description: "18 篇文章处于待发布或待审批状态", tone: "blue" },
   { title: "文件存储", description: "容量使用 72%，存在 12 个未引用文件", tone: "amber" },
 ];
+
+export type WorkbenchTrendPoint = {
+  day: string;
+  visits: number;
+  published: number;
+  users: number;
+};
+
+export const workbenchTrend: WorkbenchTrendPoint[] = [
+  { day: "周一", visits: 18920, published: 9, users: 126 },
+  { day: "周二", visits: 21480, published: 12, users: 142 },
+  { day: "周三", visits: 23640, published: 15, users: 158 },
+  { day: "周四", visits: 22110, published: 11, users: 149 },
+  { day: "周五", visits: 24860, published: 18, users: 171 },
+  { day: "周六", visits: 20370, published: 8, users: 118 },
+  { day: "周日", visits: 22940, published: 13, users: 136 },
+];

@@ -1,4 +1,5 @@
 export const AUTH_STORAGE_KEY = "lonear-admin-auth";
+export const AUTH_USER_STORAGE_KEY = "lonear-admin-current-user";
 export const THEME_STORAGE_KEY = "lonear-admin-theme";
 export const UI_SETTINGS_STORAGE_KEY = "lonear-admin-ui-settings";
 export const TAB_STATE_STORAGE_KEY = "lonear-admin-open-tabs";

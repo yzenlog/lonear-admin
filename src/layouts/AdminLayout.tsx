@@ -8,6 +8,7 @@ import { moduleMeta, moduleRoutes, sections } from "../config/modules";
 import type { ModuleId, NavSection } from "../config/modules";
 import { moduleRecords } from "../mocks/managementRecords";
 import type { ManagementRecord } from "../mocks/managementRecords";
+import type { CurrentUser } from "../api/auth";
 import { getInitialUiSettings, persistUiSettings, syncThemeMode } from "../services/session";
 import { getModuleIdFromPathname, getNavKeyForModule } from "../utils/navigation";
 import PageTabs from "../components/shared/page-tabs/PageTabs";
@@ -16,6 +17,7 @@ import { LonDrawer } from "../components/ui";
 import "./AdminLayout.css";
 
 type AdminLayoutProps = {
+  currentUser: CurrentUser | null;
   themeMode: ThemeMode;
   onThemeModeChange: (mode: ThemeMode) => void;
   onLogout: () => void;
@@ -137,7 +139,7 @@ function getBreadcrumbItems(moduleId: ModuleId, scope: string, title: string) {
   }, []);
 }
 
-function AdminLayout({ themeMode, onThemeModeChange, onLogout }: AdminLayoutProps) {
+function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: AdminLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const activeModule = getModuleIdFromPathname(location.pathname) ?? "dashboard";
@@ -531,6 +533,7 @@ function AdminLayout({ themeMode, onThemeModeChange, onLogout }: AdminLayoutProp
         userMenuOpen={userMenuOpen}
         collapsedSections={collapsedSections}
         collapsedGroups={collapsedGroups}
+        currentUser={currentUser}
         searchRef={searchRef}
         workspaceMenuRef={workspaceMenuRef}
         userMenuRef={userMenuRef}

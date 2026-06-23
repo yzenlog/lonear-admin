@@ -13,6 +13,7 @@ import {
   Settings,
   UserRound,
 } from "lucide-react";
+import type { CurrentUser } from "../../../api/auth";
 import type { ModuleId, NavGroup, NavItem, NavSection } from "../../../config/modules";
 import UserAvatar from "../user-avatar/UserAvatar";
 import "./AppSidebar.css";
@@ -25,6 +26,7 @@ type AppSidebarProps = {
   userMenuOpen: boolean;
   collapsedSections: Record<string, boolean>;
   collapsedGroups: Record<string, boolean>;
+  currentUser: CurrentUser | null;
   searchRef: RefObject<HTMLInputElement | null>;
   workspaceMenuRef: RefObject<HTMLDivElement | null>;
   userMenuRef: RefObject<HTMLDivElement | null>;
@@ -51,6 +53,7 @@ function AppSidebar({
   userMenuOpen,
   collapsedSections,
   collapsedGroups,
+  currentUser,
   searchRef,
   workspaceMenuRef,
   userMenuRef,
@@ -71,6 +74,9 @@ function AppSidebar({
   const normalizedQuery = query.trim().toLowerCase();
   const isFiltering = normalizedQuery.length > 0;
   const visibleSections = useMemo(() => filterNavSections(sections, normalizedQuery), [sections, normalizedQuery]);
+  const userName = currentUser?.name.trim() || "未登录用户";
+  const userStatus = currentUser?.email?.trim() || "在线";
+  const userInitials = getUserInitials(userName);
 
   return (
     <aside className="sidebar" aria-label="主导航">
@@ -182,12 +188,12 @@ function AppSidebar({
 
       <div className="sidebar-footer" ref={userMenuRef}>
         <button className="sidebar-user" type="button" onClick={() => onUserMenuAction("个人资料")}>
-          <UserAvatar initials="ZY" color="#1066cc" />
+          <UserAvatar initials={userInitials} color="#1066cc" />
           <span className="user-info">
-            <span className="user-name">Zenlon Young</span>
+            <span className="user-name">{userName}</span>
             <span className="user-status">
               <span className="status-dot" />
-              在线
+              {userStatus}
             </span>
           </span>
         </button>
@@ -221,6 +227,16 @@ function AppSidebar({
       </div>
     </aside>
   );
+}
+
+function getUserInitials(name: string) {
+  const segments = name.trim().split(/\s+/).filter(Boolean);
+
+  if (segments.length >= 2) {
+    return `${segments[0][0]}${segments[1][0]}`.toUpperCase();
+  }
+
+  return Array.from(name.replace(/\s+/g, "")).slice(0, 2).join("").toUpperCase() || "U";
 }
 
 function filterNavSections(sections: NavSection[], query: string) {

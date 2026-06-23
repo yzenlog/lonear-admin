@@ -1,46 +1,108 @@
 import {
   ACCENT_COLOR_OPTIONS,
   AUTH_STORAGE_KEY,
+  AUTH_USER_STORAGE_KEY,
   DEFAULT_UI_SETTINGS,
   PAGE_TABS_STYLE_OPTIONS,
   THEME_STORAGE_KEY,
   UI_SETTINGS_STORAGE_KEY,
 } from "../config/app";
 import type { AccentColor, PageTabsStyle, ThemeMode, UiSettings } from "../config/app";
+import type { CurrentUser } from "../api/auth";
+import { clearApiTokens, getAccessToken } from "./apiTokens";
 
 function hasStorage() {
   return typeof window !== "undefined" && Boolean(window.localStorage) && Boolean(window.sessionStorage);
 }
 
-export function getInitialAuthState() {
+function getAuthStorage(rememberSession: boolean): Storage | null {
   if (!hasStorage()) {
-    return false;
+    return null;
   }
 
-  return (
-    window.localStorage.getItem(AUTH_STORAGE_KEY) === "true" ||
-    window.sessionStorage.getItem(AUTH_STORAGE_KEY) === "true"
-  );
+  return rememberSession ? window.localStorage : window.sessionStorage;
 }
 
-export function persistAuthSession(rememberSession: boolean) {
+function readAuthStorageItem(key: string) {
   if (!hasStorage()) {
-    return;
+    return null;
   }
 
-  clearAuthSession();
-  const authStorage = rememberSession ? window.localStorage : window.sessionStorage;
-
-  authStorage.setItem(AUTH_STORAGE_KEY, "true");
+  return window.localStorage.getItem(key) ?? window.sessionStorage.getItem(key);
 }
 
-export function clearAuthSession() {
+function clearAuthStorage() {
   if (!hasStorage()) {
     return;
   }
 
   window.localStorage.removeItem(AUTH_STORAGE_KEY);
+  window.localStorage.removeItem(AUTH_USER_STORAGE_KEY);
   window.sessionStorage.removeItem(AUTH_STORAGE_KEY);
+  window.sessionStorage.removeItem(AUTH_USER_STORAGE_KEY);
+}
+
+function isCurrentUser(value: unknown): value is CurrentUser {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "id" in value &&
+    "name" in value &&
+    typeof value.id === "string" &&
+    typeof value.name === "string"
+  );
+}
+
+export function getInitialAuthState() {
+  return Boolean(getAccessToken());
+}
+
+export function getInitialCurrentUser(): CurrentUser | null {
+  const rawUser = readAuthStorageItem(AUTH_USER_STORAGE_KEY);
+
+  if (!rawUser) {
+    return null;
+  }
+
+  try {
+    const parsedUser = JSON.parse(rawUser) as unknown;
+
+    return isCurrentUser(parsedUser) ? parsedUser : null;
+  } catch {
+    return null;
+  }
+}
+
+export function persistCurrentUser(user: CurrentUser, rememberSession: boolean) {
+  const storage = getAuthStorage(rememberSession);
+
+  if (!storage) {
+    return;
+  }
+
+  window.localStorage.removeItem(AUTH_USER_STORAGE_KEY);
+  window.sessionStorage.removeItem(AUTH_USER_STORAGE_KEY);
+  storage.setItem(AUTH_USER_STORAGE_KEY, JSON.stringify(user));
+}
+
+export function persistAuthSession(rememberSession: boolean, user?: CurrentUser) {
+  const authStorage = getAuthStorage(rememberSession);
+
+  if (!authStorage) {
+    return;
+  }
+
+  clearAuthStorage();
+  authStorage.setItem(AUTH_STORAGE_KEY, "true");
+
+  if (user) {
+    persistCurrentUser(user, rememberSession);
+  }
+}
+
+export function clearAuthSession() {
+  clearAuthStorage();
+  clearApiTokens();
 }
 
 export function getInitialThemeMode(): ThemeMode {

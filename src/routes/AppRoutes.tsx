@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { getCurrentUser, login, logout } from "../api/auth";
 import AdminLayout from "../layouts/AdminLayout";
 import LoginPage from "../pages/auth/LoginPage";
 import type { ThemeMode } from "../config/app";
@@ -8,18 +9,21 @@ import { moduleRoutes } from "../config/modules";
 import { AdminPageRoute } from "./adminPages";
 import {
   clearAuthSession,
+  getInitialCurrentUser,
   getInitialAuthState,
   getInitialThemeMode,
   getInitialUiSettings,
   persistAuthSession,
   syncThemeMode,
 } from "../services/session";
+import { persistApiTokens } from "../services/apiTokens";
 import { getLoginRedirectPath, getProtectedLoginPath, moduleRouteEntries } from "../utils/navigation";
 
 function AppRoutes() {
   const navigate = useNavigate();
   const location = useLocation();
   const [isAuthenticated, setIsAuthenticated] = useState(getInitialAuthState);
+  const [currentUser, setCurrentUser] = useState(getInitialCurrentUser);
   const [loginEmail, setLoginEmail] = useState("admin@acme.local");
   const [loginPassword, setLoginPassword] = useState("admin123");
   const [rememberSession, setRememberSession] = useState(true);
@@ -34,6 +38,37 @@ function AppRoutes() {
     syncThemeMode(themeMode, getInitialUiSettings().accentColor);
   }, [themeMode]);
 
+  useEffect(() => {
+    if (!isAuthenticated || currentUser) {
+      return;
+    }
+
+    let ignore = false;
+
+    void getCurrentUser()
+      .then((user) => {
+        if (ignore) {
+          return;
+        }
+
+        persistAuthSession(rememberSession, user);
+        setCurrentUser(user);
+      })
+      .catch(() => {
+        if (ignore) {
+          return;
+        }
+
+        clearAuthSession();
+        setIsAuthenticated(false);
+        navigate("/login", { replace: true });
+      });
+
+    return () => {
+      ignore = true;
+    };
+  }, [currentUser, isAuthenticated, navigate, rememberSession]);
+
   function updateLoginEmail(value: string) {
     setLoginEmail(value);
     setLoginError("");
@@ -46,8 +81,12 @@ function AppRoutes() {
     setLoginMessage("企业账号受保护，登录后进入当前工作区。");
   }
 
-  function handleLogin(event: FormEvent<HTMLFormElement>) {
+  async function handleLogin(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (loginStatus === "loading") {
+      return;
+    }
 
     const normalizedEmail = loginEmail.trim();
     const hasValidEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail);
@@ -60,14 +99,33 @@ function AppRoutes() {
     }
 
     setLoginError("");
+    setLoginMessage("正在验证账号...");
     setLoginStatus("loading");
 
-    window.setTimeout(() => {
-      persistAuthSession(rememberSession);
-      setLoginStatus("idle");
+    try {
+      const loginResult = await login({
+        email: normalizedEmail,
+        password: loginPassword,
+        rememberSession,
+      });
+
+      persistApiTokens(loginResult.accessToken, loginResult.refreshToken, rememberSession);
+
+      const user = await getCurrentUser();
+
+      persistAuthSession(rememberSession, user);
+      setCurrentUser(user);
       setIsAuthenticated(true);
       navigate(getLoginRedirectPath(location.state, location.search), { replace: true });
-    }, 520);
+    } catch (error) {
+      clearAuthSession();
+      setIsAuthenticated(false);
+      setCurrentUser(null);
+      setLoginError(error instanceof Error ? error.message : "登录失败，请稍后重试");
+      setLoginMessage("");
+    } finally {
+      setLoginStatus("idle");
+    }
   }
 
   function handleRecovery() {
@@ -75,10 +133,15 @@ function AppRoutes() {
     setLoginMessage("请联系系统管理员重置密码");
   }
 
-  function handleLogout() {
-    clearAuthSession();
-    setIsAuthenticated(false);
-    navigate("/login", { replace: true });
+  async function handleLogout() {
+    try {
+      await logout();
+    } finally {
+      clearAuthSession();
+      setCurrentUser(null);
+      setIsAuthenticated(false);
+      navigate("/login", { replace: true });
+    }
   }
 
   const loginPage = (
@@ -114,7 +177,12 @@ function AppRoutes() {
       <Route
         element={
           isAuthenticated ? (
-            <AdminLayout themeMode={themeMode} onThemeModeChange={setThemeMode} onLogout={handleLogout} />
+            <AdminLayout
+              currentUser={currentUser}
+              themeMode={themeMode}
+              onThemeModeChange={setThemeMode}
+              onLogout={handleLogout}
+            />
           ) : (
             loginRedirect
           )
