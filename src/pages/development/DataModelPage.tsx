@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Columns3, Database, KeyRound, Rows3, Search, Table2 } from "lucide-react";
 import PanelHeader from "../../components/shared/panel-header/PanelHeader";
-import SearchTableLayout from "../../components/shared/search-table-layout/SearchTableLayout";
+import { SearchTablePage } from "../../components/shared/search-table";
 import { moduleMeta } from "../../config/modules";
 import { dataModelDomainLabels, dataModelTables } from "../../mocks/dataModels";
 import type { DataModelDomain, DataModelField, DataModelTable } from "../../mocks/dataModels";
@@ -55,7 +55,7 @@ function DataModelPage() {
   const rowEstimate = dataModelTables.reduce((total, table) => total + table.rowEstimate, 0);
 
   return (
-    <SearchTableLayout
+    <SearchTablePage
       className="data-model-page"
       search={
         <section className="admin-panel data-model-overview" aria-label="数据模型概览">

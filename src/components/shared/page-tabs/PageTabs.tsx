@@ -4,11 +4,13 @@ import { createPortal } from "react-dom";
 import { ChevronsRight, CopyX, Layers, RefreshCw, X } from "lucide-react";
 import { moduleMeta } from "../../../config/modules";
 import type { ModuleId } from "../../../config/modules";
+import type { PageTabsStyle } from "../../../config/app";
 import "./PageTabs.css";
 
 type PageTabsProps = {
   tabs: ModuleId[];
   activeModule: ModuleId;
+  styleVariant: PageTabsStyle;
   onSelect: (id: ModuleId) => void;
   onRefresh: (id: ModuleId) => void;
   onClose: (id: ModuleId) => void;
@@ -31,6 +33,7 @@ const MENU_OFFSET_Y = 6;
 function PageTabs({
   tabs,
   activeModule,
+  styleVariant,
   onSelect,
   onRefresh,
   onClose,
@@ -135,7 +138,7 @@ function PageTabs({
 
   return (
     <>
-      <div className="tabs page-tabs" role="tablist" aria-label="已打开页面">
+      <div className={`tabs page-tabs page-tabs-${styleVariant}`} role="tablist" aria-label="已打开页面">
         {tabs.map((id) => {
           const meta = moduleMeta[id];
           const Icon = meta.icon;

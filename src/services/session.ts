@@ -2,10 +2,11 @@ import {
   ACCENT_COLOR_OPTIONS,
   AUTH_STORAGE_KEY,
   DEFAULT_UI_SETTINGS,
+  PAGE_TABS_STYLE_OPTIONS,
   THEME_STORAGE_KEY,
   UI_SETTINGS_STORAGE_KEY,
 } from "../config/app";
-import type { AccentColor, ThemeMode, UiSettings } from "../config/app";
+import type { AccentColor, PageTabsStyle, ThemeMode, UiSettings } from "../config/app";
 
 function hasStorage() {
   return typeof window !== "undefined" && Boolean(window.localStorage) && Boolean(window.sessionStorage);
@@ -56,6 +57,20 @@ function isAccentColor(value: unknown): value is AccentColor {
   return typeof value === "string" && ACCENT_COLOR_OPTIONS.some((option) => option.id === value);
 }
 
+function normalizePageTabsStyle(value: unknown): PageTabsStyle {
+  if (value === "current") {
+    return "default";
+  }
+
+  if (value === "google") {
+    return "chrome";
+  }
+
+  return typeof value === "string" && PAGE_TABS_STYLE_OPTIONS.some((option) => option.id === value)
+    ? (value as PageTabsStyle)
+    : DEFAULT_UI_SETTINGS.pageTabsStyle;
+}
+
 export function getInitialUiSettings(): UiSettings {
   if (typeof window === "undefined") {
     return DEFAULT_UI_SETTINGS;
@@ -67,6 +82,7 @@ export function getInitialUiSettings(): UiSettings {
     const accentColor = isAccentColor(parsedSettings.accentColor)
       ? parsedSettings.accentColor
       : DEFAULT_UI_SETTINGS.accentColor;
+    const pageTabsStyle = normalizePageTabsStyle(parsedSettings.pageTabsStyle);
 
     return {
       tabsPersistent:
@@ -76,6 +92,7 @@ export function getInitialUiSettings(): UiSettings {
       showNotice:
         typeof parsedSettings.showNotice === "boolean" ? parsedSettings.showNotice : DEFAULT_UI_SETTINGS.showNotice,
       accentColor,
+      pageTabsStyle,
     };
   } catch {
     return DEFAULT_UI_SETTINGS;

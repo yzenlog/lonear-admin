@@ -3,8 +3,8 @@ import type { CSSProperties, RefObject } from "react";
 import {
   Check,
   ChevronDown,
-  ChevronsDown,
   Command,
+  ListPlus,
   LocateFixed,
   LogOut,
   MoreHorizontal,
@@ -130,7 +130,7 @@ function AppSidebar({
                 data-tooltip="展开菜单"
                 onClick={onExpandAllMenus}
               >
-                <ChevronsDown size={14} strokeWidth={2.1} />
+                <ListPlus size={17} strokeWidth={2.2} />
               </button>
               <button
                 className="sidebar-menu-action-btn"
@@ -139,7 +139,7 @@ function AppSidebar({
                 data-tooltip="聚焦菜单"
                 onClick={onFocusActiveMenu}
               >
-                <LocateFixed size={14} strokeWidth={2.1} />
+                <LocateFixed size={17} strokeWidth={2.2} />
               </button>
             </div>
           </div>

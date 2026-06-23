@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
-import { Bell, Check, ChevronRight, Menu, Moon, Palette, Settings, Sun } from "lucide-react";
+import { Bell, Check, ChevronRight, Layers, Menu, Moon, Palette, Settings, Sun } from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { ACCENT_COLOR_OPTIONS, TAB_STATE_STORAGE_KEY } from "../config/app";
-import type { AccentColor, ThemeMode, UiSettings } from "../config/app";
+import { ACCENT_COLOR_OPTIONS, PAGE_TABS_STYLE_OPTIONS, TAB_STATE_STORAGE_KEY } from "../config/app";
+import type { AccentColor, PageTabsStyle, ThemeMode, UiSettings } from "../config/app";
 import { moduleMeta, moduleRoutes, sections } from "../config/modules";
 import type { ModuleId, NavSection } from "../config/modules";
 import { moduleRecords } from "../mocks/managementRecords";
@@ -115,6 +115,26 @@ function getExpandedSidebarState(navSections: NavSection[]) {
   );
 }
 
+function isStandaloneModule(moduleId: ModuleId) {
+  return sections.some((section) => section.standalone && section.items?.some((item) => item.id === moduleId));
+}
+
+function getBreadcrumbItems(moduleId: ModuleId, scope: string, title: string) {
+  if (isStandaloneModule(moduleId)) {
+    return [title];
+  }
+
+  return [...scope.split("/"), title].reduce<string[]>((items, item) => {
+    const crumb = item.trim();
+
+    if (crumb && items[items.length - 1] !== crumb) {
+      items.push(crumb);
+    }
+
+    return items;
+  }, []);
+}
+
 function AdminLayout({ onLogout }: AdminLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -144,6 +164,7 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
   const notificationMenuRef = useRef<HTMLDivElement>(null);
   const activeNavKey = useMemo(() => getNavKeyForModule(activeModule), [activeModule]);
   const meta = moduleMeta[activeModule];
+  const breadcrumbItems = getBreadcrumbItems(activeModule, meta.scope, meta.title);
   const notificationItems = useMemo<TopbarNotification[]>(() => {
     const inboxItems = moduleRecords.messages.map((record, index) => ({
       ...record,
@@ -444,6 +465,16 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
     setNotice(`主题色已切换为${accentOption?.label ?? "默认"}`);
   }
 
+  function handlePageTabsStyleChange(pageTabsStyle: PageTabsStyle) {
+    const tabsStyleOption = PAGE_TABS_STYLE_OPTIONS.find((option) => option.id === pageTabsStyle);
+
+    setUiSettings((currentSettings) => ({
+      ...currentSettings,
+      pageTabsStyle,
+    }));
+    setNotice(`标签风格已切换为${tabsStyleOption?.label ?? "默认"}`);
+  }
+
   function handleSectionQuickAdd(section: NavSection) {
     setNotice(`${section.title}快捷新增入口已打开`);
   }
@@ -533,9 +564,12 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
             <Menu size={17} strokeWidth={2.1} />
           </button>
           <div className="breadcrumb" aria-label="当前位置">
-            <span className="crumb-muted">{meta.scope}</span>
-            <span className="sep">/</span>
-            <span>{meta.title}</span>
+            {breadcrumbItems.map((item, index) => (
+              <Fragment key={`${item}-${index}`}>
+                {index > 0 ? <span className="sep">/</span> : null}
+                <span className={index === breadcrumbItems.length - 1 ? undefined : "crumb-muted"}>{item}</span>
+              </Fragment>
+            ))}
           </div>
           <div className="topbar-actions">
             {uiSettings.showNotice ? <span className="notice">{notice}</span> : null}
@@ -676,6 +710,40 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
               </button>
             </section>
 
+            <section className="settings-section" aria-labelledby="settings-tabs-style-title">
+              <div className="settings-section-head">
+                <Layers size={15} strokeWidth={2.2} aria-hidden="true" />
+                <h3 id="settings-tabs-style-title">标签风格</h3>
+              </div>
+              <div className="tab-style-grid" role="radiogroup" aria-label="标签风格">
+                {PAGE_TABS_STYLE_OPTIONS.map((option) => {
+                  const active = uiSettings.pageTabsStyle === option.id;
+
+                  return (
+                    <button
+                      className={`tab-style-option ${active ? "active" : ""}`}
+                      type="button"
+                      role="radio"
+                      aria-checked={active}
+                      key={option.id}
+                      onClick={() => handlePageTabsStyleChange(option.id)}
+                    >
+                      <span className={`tab-style-preview tab-style-preview-${option.id}`} aria-hidden="true">
+                        <span />
+                        <span />
+                        <span />
+                      </span>
+                      <span className="tab-style-copy">
+                        <strong>{option.label}</strong>
+                        <small>{option.description}</small>
+                      </span>
+                      {active ? <Check size={14} strokeWidth={2.3} /> : null}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
             <section className="settings-section" aria-labelledby="settings-theme-title">
               <div className="settings-section-head">
                 <Palette size={15} strokeWidth={2.2} aria-hidden="true" />
@@ -705,6 +773,7 @@ function AdminLayout({ onLogout }: AdminLayoutProps) {
         <PageTabs
           tabs={openTabs}
           activeModule={activeModule}
+          styleVariant={uiSettings.pageTabsStyle}
           onSelect={selectTab}
           onRefresh={refreshTab}
           onClose={closeTab}

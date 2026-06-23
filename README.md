@@ -6,6 +6,7 @@
 
 ```text
 src/
+  api/            按业务域组织的接口模块
   components/
     ui/             基础 UI 组件，目录使用 lon-xxx，组件名使用 LonXxx
     shared/         多页面复用组件，每个组件一个文件夹，组件名至少两个单词
@@ -21,7 +22,7 @@ src/
     audit/          审计页面
     showcase/       演示台页面
   routes/           路由守卫、路由注册和页面映射
-  services/         会话、存储等应用服务
+  services/         会话、请求、存储等应用服务
   styles/           全局样式与设计 tokens
   utils/            与框架无关的通用工具
 ```
@@ -38,3 +39,7 @@ pnpm preview
 ```
 
 PWA 的 service worker 只在生产构建中注册，使用 `pnpm build && pnpm preview` 可以验证安装和离线缓存能力。
+
+## Mock API
+
+开发环境可通过 `VITE_USE_MOCK=true` 启用 fetch 请求拦截。页面仍然调用 `src/api` 中的业务接口，匹配到的请求会由 `src/mocks` 返回本地数据。

@@ -11,7 +11,7 @@ import {
   Rows3,
 } from "lucide-react";
 import PanelHeader from "../../components/shared/panel-header/PanelHeader";
-import SearchTableLayout from "../../components/shared/search-table-layout/SearchTableLayout";
+import { SearchTablePage } from "../../components/shared/search-table";
 import StatusText from "../../components/shared/status-text/StatusText";
 import { moduleMeta } from "../../config/modules";
 import { menuTreeRecords } from "../../mocks/menuRecords";
@@ -81,7 +81,7 @@ function MenuManagementPage() {
   }
 
   return (
-    <SearchTableLayout
+    <SearchTablePage
       className="menu-management-page"
       search={
         <section className="admin-panel menu-overview-panel" aria-label="菜单概览">

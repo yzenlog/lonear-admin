@@ -274,6 +274,163 @@
   transform: translateX(16px);
 }
 
+.tab-style-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.tab-style-option {
+  display: grid;
+  grid-template-columns: 76px minmax(0, 1fr) 16px;
+  width: 100%;
+  min-height: 62px;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--control-bg);
+  color: var(--text-muted);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background 0.12s ease,
+    border-color 0.12s ease,
+    color 0.12s ease;
+}
+
+.tab-style-option:hover {
+  border-color: var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+}
+
+.tab-style-option.active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.tab-style-option svg {
+  justify-self: end;
+  color: var(--accent);
+}
+
+.tab-style-preview {
+  display: flex;
+  width: 72px;
+  height: 34px;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--surface);
+}
+
+.tab-style-preview span {
+  display: block;
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.tab-style-preview-default span {
+  height: 18px;
+  border-radius: 6px;
+  background: var(--surface-2);
+}
+
+.tab-style-preview-default span:first-child {
+  background: var(--accent-soft-2);
+  box-shadow: inset 0 0 0 1px var(--accent-soft);
+}
+
+.tab-style-preview-underline {
+  align-items: end;
+  padding-bottom: 0;
+}
+
+.tab-style-preview-underline span {
+  height: 22px;
+  border-bottom: 2px solid transparent;
+}
+
+.tab-style-preview-underline span:first-child {
+  border-bottom-color: var(--accent);
+}
+
+.tab-style-preview-chrome {
+  align-items: end;
+  padding: 6px 5px 0;
+  background: var(--surface-2);
+}
+
+.tab-style-preview-chrome span {
+  position: relative;
+  height: 22px;
+  border-radius: 6px 6px 0 0;
+  background: var(--surface-hover);
+}
+
+.tab-style-preview-chrome span + span {
+  margin-left: -5px;
+}
+
+.tab-style-preview-chrome span:first-child {
+  z-index: 1;
+  background: var(--accent-soft-2);
+  box-shadow: inset 0 0 0 1px var(--accent-soft);
+}
+
+.tab-style-preview-chrome span:first-child::before,
+.tab-style-preview-chrome span:first-child::after {
+  position: absolute;
+  bottom: 0;
+  width: 7px;
+  height: 7px;
+  content: "";
+}
+
+.tab-style-preview-chrome span:first-child::before {
+  left: -7px;
+  background: radial-gradient(circle at 0 0, transparent 0, transparent 7px, var(--accent-soft-2) 7.5px);
+}
+
+.tab-style-preview-chrome span:first-child::after {
+  right: -7px;
+  background: radial-gradient(circle at 100% 0, transparent 0, transparent 7px, var(--accent-soft-2) 7.5px);
+}
+
+.tab-style-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+}
+
+.tab-style-copy strong {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 18px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-style-option.active .tab-style-copy strong {
+  color: var(--accent);
+}
+
+.tab-style-copy small {
+  overflow: hidden;
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 17px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .accent-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -583,6 +583,10 @@ button {
   background: transparent;
 }
 
+.table-refresh-btn.is-loading svg {
+  animation: table-refresh-spin 0.8s linear infinite;
+}
+
 .field-control {
   position: relative;
 }
@@ -705,6 +709,44 @@ button {
   color: var(--text-dim);
 }
 
+.table-data-region {
+  position: relative;
+  display: flex;
+  min-height: 0;
+  flex: 1 1 auto;
+  flex-direction: column;
+}
+
+.table-loading-overlay {
+  position: absolute;
+  z-index: 12;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.66);
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 600;
+  pointer-events: auto;
+}
+
+.table-loading-spinner {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(39, 111, 240, 0.22);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: table-refresh-spin 0.8s linear infinite;
+}
+
+@keyframes table-refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .table-scroll {
   overflow-x: auto;
   overflow-y: hidden;
@@ -715,12 +757,12 @@ button {
   overflow-y: auto;
 }
 
-.admin-content > .search-table-layout,
+.admin-content > .search-table-page,
 .admin-content > .role-page {
   flex: 1 1 auto;
 }
 
-.search-table-layout,
+.search-table-page,
 .role-page {
   display: flex;
   min-height: 0;
@@ -728,7 +770,7 @@ button {
   gap: 14px;
 }
 
-.search-table-layout .table-module,
+.search-table-page .table-module,
 .role-page .table-module {
   display: flex;
   min-height: 0;
@@ -736,16 +778,16 @@ button {
   flex-direction: column;
 }
 
-.search-table-layout .table-toolbar,
-.search-table-layout .table-summary-scroll,
-.search-table-layout .table-footer,
+.search-table-page .table-toolbar,
+.search-table-page .table-summary-scroll,
+.search-table-page .table-footer,
 .role-page .table-toolbar,
 .role-page .table-summary-scroll,
 .role-page .table-footer {
   flex: 0 0 auto;
 }
 
-.search-table-layout .table-scroll,
+.search-table-page .table-scroll,
 .role-page .table-scroll {
   min-height: 0;
   flex: 1 1 auto;
@@ -754,18 +796,18 @@ button {
   scrollbar-width: thin;
 }
 
-.search-table-layout .table-scroll::-webkit-scrollbar,
+.search-table-page .table-scroll::-webkit-scrollbar,
 .role-page .table-scroll::-webkit-scrollbar {
   width: 6px;
   height: 6px;
 }
 
-.search-table-layout .table-scroll::-webkit-scrollbar-track,
+.search-table-page .table-scroll::-webkit-scrollbar-track,
 .role-page .table-scroll::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.search-table-layout .table-scroll::-webkit-scrollbar-thumb,
+.search-table-page .table-scroll::-webkit-scrollbar-thumb,
 .role-page .table-scroll::-webkit-scrollbar-thumb {
   border: 1px solid var(--panel-bg);
   border-radius: 999px;
@@ -773,13 +815,13 @@ button {
   background-clip: padding-box;
 }
 
-.search-table-layout .table-scroll::-webkit-scrollbar-thumb:hover,
+.search-table-page .table-scroll::-webkit-scrollbar-thumb:hover,
 .role-page .table-scroll::-webkit-scrollbar-thumb:hover {
   background: var(--text-dim);
   background-clip: padding-box;
 }
 
-.search-table-layout .table-scroll::-webkit-scrollbar-corner,
+.search-table-page .table-scroll::-webkit-scrollbar-corner,
 .role-page .table-scroll::-webkit-scrollbar-corner {
   background: transparent;
 }
@@ -922,9 +964,9 @@ button {
 }
 
 .role-table .role-image-column {
-  width: 72px;
-  min-width: 72px;
-  max-width: 72px;
+  width: 88px;
+  min-width: 88px;
+  max-width: 88px;
   text-align: center;
 }
 
@@ -1230,15 +1272,15 @@ button {
 }
 
 .image-showcase-thumb.role-image-thumb {
-  width: 42px;
+  width: 56px;
   border-radius: 7px;
   background-color: var(--panel-bg);
   vertical-align: middle;
 }
 
 .image-showcase-thumb.role-image-thumb img {
-  width: 34px;
-  height: 34px;
+  width: 48px;
+  height: 48px;
   border-radius: 4px;
   object-fit: contain;
 }
@@ -1458,6 +1500,17 @@ button {
 .table-batch-action.active {
   background: var(--accent-soft);
   color: var(--accent);
+}
+
+.table-batch-action:disabled {
+  color: var(--text-dim);
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.table-batch-action:disabled:hover {
+  background: transparent;
+  color: var(--text-dim);
 }
 
 .batch-action-popover {

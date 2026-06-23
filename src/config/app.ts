@@ -6,6 +6,7 @@ export const DASHBOARD_NAV_KEY = "section:dashboard:dashboard:工作台";
 
 export type ThemeMode = "light" | "dark";
 export type AccentColor = "blue" | "green" | "purple" | "rose";
+export type PageTabsStyle = "default" | "underline" | "chrome";
 
 type AccentTokens = {
   accent: string;
@@ -26,13 +27,37 @@ export type UiSettings = {
   tabsPersistent: boolean;
   showNotice: boolean;
   accentColor: AccentColor;
+  pageTabsStyle: PageTabsStyle;
 };
 
 export const DEFAULT_UI_SETTINGS: UiSettings = {
   tabsPersistent: true,
   showNotice: true,
   accentColor: "blue",
+  pageTabsStyle: "default",
 };
+
+export const PAGE_TABS_STYLE_OPTIONS: Array<{
+  id: PageTabsStyle;
+  label: string;
+  description: string;
+}> = [
+  {
+    id: "default",
+    label: "默认",
+    description: "柔和填充标签",
+  },
+  {
+    id: "underline",
+    label: "下划线",
+    description: "旧版底线高亮",
+  },
+  {
+    id: "chrome",
+    label: "Chrome",
+    description: "贴底圆角标签",
+  },
+];
 
 export const ACCENT_COLOR_OPTIONS: AccentColorOption[] = [
   {

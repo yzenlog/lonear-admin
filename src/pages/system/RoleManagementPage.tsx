@@ -24,7 +24,7 @@ import {
   ZoomIn,
   ZoomOut,
 } from "lucide-react";
-import SearchTableLayout from "../../components/shared/search-table-layout/SearchTableLayout";
+import { DataTablePanel, SearchFormPanel, SearchTablePage } from "../../components/shared/search-table";
 import StatusText from "../../components/shared/status-text/StatusText";
 import { LonButton, LonDrawer, LonInput, LonModal, LonNumberInput, LonSelect } from "../../components/ui";
 import type { LonNumberInputValue } from "../../components/ui";
@@ -46,6 +46,10 @@ const rolePageSizeOptions = ROLE_PAGE_SIZE_OPTIONS.map((pageSize) => ({
   value: String(pageSize),
   label: `${pageSize} 条/页`,
 }));
+const DEFAULT_ROLE_OWNER = "运营中心";
+const DEFAULT_ROLE_STATUS = "启用";
+const ROLE_OWNER_OPTIONS = ["系统内置", "运营中心", "风控部", "项目组", "财务部", "市场部", "数据中心"] as const;
+const ROLE_STATUS_OPTIONS = ["启用", "只读", "待复核", "停用"] as const;
 const ROLE_IMAGE_ASSETS = [
   { title: "测试图片 1", src: "/images/avatars/avatar-1.jpeg", meta: "152 x 152 · JPEG" },
   { title: "测试图片 2", src: "/images/avatars/avatar-2.png", meta: "990 x 798 · PNG" },
@@ -82,7 +86,14 @@ const roleDisplayFields = [
 
 type RoleFilters = typeof DEFAULT_ROLE_FILTERS;
 type RoleImage = (typeof ROLE_IMAGE_ASSETS)[number];
-type RoleRecord = ManagementRecord & { balance: number; image: RoleImage };
+type RoleRecordMetadata = {
+  createdAt?: string;
+  lastOperator?: string;
+  permissionCount?: number;
+  updatedAt?: string;
+};
+type RoleComputedRecord = ManagementRecord & RoleRecordMetadata;
+type RoleRecord = RoleComputedRecord & { balance: number; id: string; image: RoleImage };
 type RoleDisplayField = (typeof roleDisplayFields)[number]["id"];
 type SearchSelectOption = {
   value: string;
@@ -107,7 +118,7 @@ type TableDisplayConfig = {
   compact: boolean;
   hoverable: boolean;
 };
-type RoleDialogMode = "detail" | "edit" | "delete" | "batchDelete" | null;
+type RoleDialogMode = "create" | "detail" | "edit" | "delete" | "batchDelete" | null;
 type RoleEditForm = {
   title: string;
   description: string;
@@ -161,15 +172,18 @@ type RoleTablePanelProps = {
   fieldMenuOpen: boolean;
   fieldMenuRef: Ref<HTMLDivElement>;
   filteredRoleCount: number;
+  isRefreshing: boolean;
   onBatchActionMenuOpenChange: Dispatch<SetStateAction<boolean>>;
   onExportCurrentPageRoles: () => void;
   onExportSelectedRoles: () => void;
   onImagePreviewOpen: (image: RoleImage) => void;
   onOpenBatchDeleteDialog: () => void;
-  onOpenRoleDialog: (mode: Exclude<RoleDialogMode, null>, record: RoleRecord) => void;
+  onOpenCreateRoleDialog: () => void;
+  onOpenRoleDialog: (mode: Exclude<RoleDialogMode, "create" | null>, record: RoleRecord) => void;
   onPageChange: Dispatch<SetStateAction<number>>;
   onPageSizeChange: (value: string) => void;
   onPagedRoleSelectionToggle: () => void;
+  onRefreshRoles: () => void;
   onRoleSelectionToggle: (roleKey: string) => void;
   onRoleSort: (sortKey: RoleSortKey) => void;
   onRoleColumnToggle: (fieldId: RoleDisplayField) => void;
@@ -217,6 +231,7 @@ const DEFAULT_TABLE_DISPLAY_CONFIG = {
   compact: false,
   hoverable: true,
 };
+const ROLE_TABLE_PREFERENCES_STORAGE_KEY = "lonear-admin:role-management:table-preferences";
 const DEFAULT_ROLE_IMAGE_PREVIEW_STATE: RoleImagePreviewState = {
   scale: 1,
   rotation: 0,
@@ -231,7 +246,7 @@ const roleTableSummaryItems: RoleTableSummaryItem[] = [
 ];
 const ROLE_TABLE_COLUMN_WIDTHS: RoleTableColumnWidths = {
   selection: 82,
-  image: 72,
+  image: 88,
   name: 300,
   members: 92,
   roleType: 112,
@@ -246,6 +261,100 @@ const ROLE_TABLE_COLUMN_WIDTHS: RoleTableColumnWidths = {
   createdAt: 168,
   actions: 156,
 };
+type RoleTablePreferences = {
+  pageSize: number;
+  tableDisplayConfig: TableDisplayConfig;
+  visibleRoleColumns: Record<RoleDisplayField, boolean>;
+};
+
+function createDefaultRoleTablePreferences(): RoleTablePreferences {
+  return {
+    pageSize: DEFAULT_ROLE_PAGE_SIZE,
+    tableDisplayConfig: DEFAULT_TABLE_DISPLAY_CONFIG,
+    visibleRoleColumns: DEFAULT_VISIBLE_ROLE_COLUMNS,
+  };
+}
+
+function isRolePageSize(value: unknown): value is (typeof ROLE_PAGE_SIZE_OPTIONS)[number] {
+  return (
+    typeof value === "number" &&
+    ROLE_PAGE_SIZE_OPTIONS.includes(value as (typeof ROLE_PAGE_SIZE_OPTIONS)[number])
+  );
+}
+
+function parseVisibleRoleColumns(value: unknown) {
+  const nextColumns = { ...DEFAULT_VISIBLE_ROLE_COLUMNS };
+
+  if (!value || typeof value !== "object") {
+    return nextColumns;
+  }
+
+  roleDisplayFields.forEach((field) => {
+    const nextValue = (value as Partial<Record<RoleDisplayField, unknown>>)[field.id];
+
+    if (typeof nextValue === "boolean") {
+      nextColumns[field.id] = nextValue;
+    }
+  });
+
+  return nextColumns;
+}
+
+function parseTableDisplayConfig(value: unknown) {
+  const nextConfig = { ...DEFAULT_TABLE_DISPLAY_CONFIG };
+
+  if (!value || typeof value !== "object") {
+    return nextConfig;
+  }
+
+  (Object.keys(DEFAULT_TABLE_DISPLAY_CONFIG) as Array<keyof TableDisplayConfig>).forEach((key) => {
+    const nextValue = (value as Partial<Record<keyof TableDisplayConfig, unknown>>)[key];
+
+    if (typeof nextValue === "boolean") {
+      nextConfig[key] = nextValue;
+    }
+  });
+
+  return nextConfig;
+}
+
+function readRoleTablePreferences(): RoleTablePreferences {
+  const fallbackPreferences = createDefaultRoleTablePreferences();
+
+  if (typeof window === "undefined") {
+    return fallbackPreferences;
+  }
+
+  try {
+    const rawPreferences = window.localStorage.getItem(ROLE_TABLE_PREFERENCES_STORAGE_KEY);
+
+    if (!rawPreferences) {
+      return fallbackPreferences;
+    }
+
+    const parsedPreferences = JSON.parse(rawPreferences) as Partial<RoleTablePreferences>;
+
+    return {
+      pageSize: isRolePageSize(parsedPreferences.pageSize) ? parsedPreferences.pageSize : DEFAULT_ROLE_PAGE_SIZE,
+      tableDisplayConfig: parseTableDisplayConfig(parsedPreferences.tableDisplayConfig),
+      visibleRoleColumns: parseVisibleRoleColumns(parsedPreferences.visibleRoleColumns),
+    };
+  } catch {
+    return fallbackPreferences;
+  }
+}
+
+function saveRoleTablePreferences(preferences: RoleTablePreferences) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(ROLE_TABLE_PREFERENCES_STORAGE_KEY, JSON.stringify(preferences));
+  } catch {
+    // Ignore storage failures so private mode or quota limits do not break table interactions.
+  }
+}
 
 function getRoleMemberCount(record: ManagementRecord) {
   return Number.parseInt(record.meta, 10) || 0;
@@ -321,7 +430,11 @@ function getRoleDataScope(record: ManagementRecord) {
   return `${record.owner}数据`;
 }
 
-function getRolePermissionCount(record: ManagementRecord) {
+function getRolePermissionCount(record: RoleComputedRecord) {
+  if (typeof record.permissionCount === "number") {
+    return `${record.permissionCount} 项`;
+  }
+
   const roleType = getRoleType(record);
   const permissionCountMap: Record<ReturnType<typeof getRoleType>, number> = {
     system: 128,
@@ -351,7 +464,11 @@ function getRoleMemberLimit(record: ManagementRecord) {
   return "10 人";
 }
 
-function getRoleLastOperator(record: ManagementRecord) {
+function getRoleLastOperator(record: RoleComputedRecord) {
+  if (record.lastOperator) {
+    return record.lastOperator;
+  }
+
   if (record.owner === "系统内置") {
     return "系统";
   }
@@ -367,7 +484,11 @@ function getRoleLastOperator(record: ManagementRecord) {
   return "李项目";
 }
 
-function getRoleCreatedAt(record: ManagementRecord) {
+function getRoleCreatedAt(record: RoleComputedRecord) {
+  if (record.createdAt) {
+    return record.createdAt;
+  }
+
   if (record.owner === "系统内置") {
     return "2024-01-08 09:18:36";
   }
@@ -395,20 +516,20 @@ function getRoleUpdatedRange(record: ManagementRecord) {
   return "older";
 }
 
-function getRoleUpdatedSortValue(record: ManagementRecord) {
+function getRoleUpdatedSortValue(record: RoleComputedRecord) {
   return Date.parse(getRoleUpdatedAt(record).replace(" ", "T"));
 }
 
-function getRoleCreatedSortValue(record: ManagementRecord) {
+function getRoleCreatedSortValue(record: RoleComputedRecord) {
   return Date.parse(getRoleCreatedAt(record).replace(" ", "T"));
 }
 
-function getRoleUpdatedAt(record: ManagementRecord) {
-  return ROLE_UPDATED_AT_MAP[record.updated] ?? record.updated;
+function getRoleUpdatedAt(record: RoleComputedRecord) {
+  return record.updatedAt ?? ROLE_UPDATED_AT_MAP[record.updated] ?? record.updated;
 }
 
-function getRoleKey(record: ManagementRecord) {
-  return `${record.title}-${record.owner}-${record.updated}`;
+function getRoleKey(record: RoleRecord) {
+  return record.id;
 }
 
 const ROLE_TABLE_SORT_CONFIG: Record<RoleSortKey, RoleTableSortConfig> = {
@@ -508,6 +629,7 @@ function createRoleRecords(records: ManagementRecord[]): RoleRecord[] {
   return records.map((record, index) => ({
     ...record,
     balance: ROLE_BALANCE_AMOUNTS[index % ROLE_BALANCE_AMOUNTS.length],
+    id: `role-${index + 1}`,
     image: ROLE_IMAGE_ASSETS[index % ROLE_IMAGE_ASSETS.length],
   }));
 }
@@ -588,6 +710,60 @@ function createRoleEditForm(record: ManagementRecord): RoleEditForm {
     owner: record.owner,
     status: record.status,
     memberCount: getRoleMemberCount(record),
+  };
+}
+
+function createEmptyRoleForm(): RoleEditForm {
+  return {
+    title: "",
+    description: "",
+    owner: DEFAULT_ROLE_OWNER,
+    status: DEFAULT_ROLE_STATUS,
+    memberCount: 0,
+  };
+}
+
+function formatRoleDateTime(date: Date) {
+  const pad = (value: number) => String(value).padStart(2, "0");
+
+  return [
+    date.getFullYear(),
+    "-",
+    pad(date.getMonth() + 1),
+    "-",
+    pad(date.getDate()),
+    " ",
+    pad(date.getHours()),
+    ":",
+    pad(date.getMinutes()),
+    ":",
+    pad(date.getSeconds()),
+  ].join("");
+}
+
+function createRoleRecordId() {
+  return `role-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function createRoleRecordFromForm(form: RoleEditForm, recordIndex: number): RoleRecord {
+  const memberCount = typeof form.memberCount === "number" ? form.memberCount : 0;
+  const now = formatRoleDateTime(new Date());
+
+  return {
+    id: createRoleRecordId(),
+    title: form.title.trim(),
+    description: form.description.trim(),
+    meta: `${memberCount} 位成员`,
+    owner: form.owner,
+    status: form.status,
+    tone: getRoleToneByStatus(form.status),
+    updated: "今天",
+    balance: 0,
+    createdAt: now,
+    image: ROLE_IMAGE_ASSETS[recordIndex % ROLE_IMAGE_ASSETS.length],
+    lastOperator: "当前用户",
+    permissionCount: 0,
+    updatedAt: now,
   };
 }
 
@@ -819,72 +995,11 @@ function RoleSearchForm({
   updatedRangeOptions,
 }: RoleSearchFormProps) {
   return (
-    <form className="admin-panel search-form" onSubmit={onSearch}>
-      <div className={`search-form-grid ${searchExpanded ? "expanded" : ""}`}>
-        <label className="form-field">
-          <span>角色名称</span>
-          <input
-            value={draftFilters.keyword}
-            onChange={(event) => onFilterChange("keyword", event.target.value)}
-            placeholder="请输入角色名称 / 描述"
-          />
-        </label>
-
-        <div className="form-field">
-          <span>状态</span>
-          <SearchSelect
-            ariaLabel="选择角色状态"
-            options={statusFilterOptions}
-            value={draftFilters.status}
-            onChange={(value) => onFilterChange("status", value)}
-          />
-        </div>
-
-        <div className="form-field">
-          <span>所属组织</span>
-          <SearchSelect
-            ariaLabel="选择所属组织"
-            options={ownerFilterOptions}
-            value={draftFilters.owner}
-            onChange={(value) => onFilterChange("owner", value)}
-          />
-        </div>
-
-        {searchExpanded ? (
-          <>
-            <div className="form-field">
-              <span>角色类型</span>
-              <SearchSelect
-                ariaLabel="选择角色类型"
-                options={roleTypeOptions}
-                value={draftFilters.roleType}
-                onChange={(value) => onFilterChange("roleType", value)}
-              />
-            </div>
-
-            <div className="form-field">
-              <span>成员规模</span>
-              <SearchSelect
-                ariaLabel="选择成员规模"
-                options={memberSizeOptions}
-                value={draftFilters.memberSize}
-                onChange={(value) => onFilterChange("memberSize", value)}
-              />
-            </div>
-
-            <div className="form-field">
-              <span>更新时间</span>
-              <SearchSelect
-                ariaLabel="选择更新时间"
-                options={updatedRangeOptions}
-                value={draftFilters.updatedRange}
-                onChange={(value) => onFilterChange("updatedRange", value)}
-              />
-            </div>
-          </>
-        ) : null}
-
-        <div className="search-form-actions">
+    <SearchFormPanel
+      expanded={searchExpanded}
+      onSubmit={onSearch}
+      actions={
+        <>
           <button className="btn-secondary" type="button" onClick={onReset}>
             <X size={13} strokeWidth={2.1} />
             重置
@@ -897,9 +1012,72 @@ function RoleSearchForm({
             {searchExpanded ? "收起" : "展开"}
             <ChevronDown size={13} strokeWidth={2.1} />
           </button>
-        </div>
+        </>
+      }
+    >
+      <label className="form-field">
+        <span>角色名称</span>
+        <input
+          value={draftFilters.keyword}
+          onChange={(event) => onFilterChange("keyword", event.target.value)}
+          placeholder="请输入角色名称 / 描述"
+        />
+      </label>
+
+      <div className="form-field">
+        <span>状态</span>
+        <SearchSelect
+          ariaLabel="选择角色状态"
+          options={statusFilterOptions}
+          value={draftFilters.status}
+          onChange={(value) => onFilterChange("status", value)}
+        />
       </div>
-    </form>
+
+      <div className="form-field">
+        <span>所属组织</span>
+        <SearchSelect
+          ariaLabel="选择所属组织"
+          options={ownerFilterOptions}
+          value={draftFilters.owner}
+          onChange={(value) => onFilterChange("owner", value)}
+        />
+      </div>
+
+      {searchExpanded ? (
+        <>
+          <div className="form-field">
+            <span>角色类型</span>
+            <SearchSelect
+              ariaLabel="选择角色类型"
+              options={roleTypeOptions}
+              value={draftFilters.roleType}
+              onChange={(value) => onFilterChange("roleType", value)}
+            />
+          </div>
+
+          <div className="form-field">
+            <span>成员规模</span>
+            <SearchSelect
+              ariaLabel="选择成员规模"
+              options={memberSizeOptions}
+              value={draftFilters.memberSize}
+              onChange={(value) => onFilterChange("memberSize", value)}
+            />
+          </div>
+
+          <div className="form-field">
+            <span>更新时间</span>
+            <SearchSelect
+              ariaLabel="选择更新时间"
+              options={updatedRangeOptions}
+              value={draftFilters.updatedRange}
+              onChange={(value) => onFilterChange("updatedRange", value)}
+            />
+          </div>
+        </>
+      ) : null}
+    </SearchFormPanel>
   );
 }
 
@@ -911,16 +1089,19 @@ function RoleTablePanel({
   fieldMenuOpen,
   fieldMenuRef,
   filteredRoleCount,
+  isRefreshing,
   onBatchActionMenuOpenChange,
   onExportCurrentPageRoles,
   onExportSelectedRoles,
   onFieldMenuOpenChange,
   onImagePreviewOpen,
   onOpenBatchDeleteDialog,
+  onOpenCreateRoleDialog,
   onOpenRoleDialog,
   onPageChange,
   onPageSizeChange,
   onPagedRoleSelectionToggle,
+  onRefreshRoles,
   onRoleColumnToggle,
   onRoleSelectionToggle,
   onRoleSort,
@@ -947,18 +1128,37 @@ function RoleTablePanel({
   visibleTableColumnCount,
 }: RoleTablePanelProps) {
   return (
-    <section className="admin-panel table-module">
-      <div className="table-toolbar">
-        <button className="btn-primary table-create-btn" type="button">
+    <DataTablePanel
+      loading={isRefreshing}
+      toolbar={
+        <>
+        <button
+          className="btn-primary table-create-btn"
+          type="button"
+          disabled={isRefreshing}
+          onClick={onOpenCreateRoleDialog}
+        >
           <Plus size={13} strokeWidth={2.3} />
           {moduleMeta.roles.action}
         </button>
         <div className="table-toolbar-actions">
           <button
+            className={`filter-btn table-icon-btn table-refresh-btn ${isRefreshing ? "is-loading" : ""}`}
+            type="button"
+            aria-label={isRefreshing ? "正在刷新列表" : "刷新列表"}
+            title={isRefreshing ? "正在刷新" : "刷新列表"}
+            disabled={isRefreshing}
+            onClick={onRefreshRoles}
+          >
+            <RefreshCw size={14} strokeWidth={2.2} />
+          </button>
+
+          <button
             className="filter-btn table-icon-btn"
             type="button"
             aria-label="导出为 Excel"
             title="导出为 Excel"
+            disabled={isRefreshing}
             onClick={onExportCurrentPageRoles}
           >
             <Download size={14} strokeWidth={2.2} />
@@ -970,6 +1170,7 @@ function RoleTablePanel({
               type="button"
               aria-haspopup="menu"
               aria-expanded={fieldMenuOpen}
+              disabled={isRefreshing}
               onClick={() => {
                 onFieldMenuOpenChange((open) => !open);
                 onTableConfigOpenChange(false);
@@ -1004,6 +1205,7 @@ function RoleTablePanel({
               type="button"
               aria-haspopup="menu"
               aria-expanded={tableConfigOpen}
+              disabled={isRefreshing}
               onClick={() => {
                 onTableConfigOpenChange((open) => !open);
                 onFieldMenuOpenChange(false);
@@ -1075,143 +1277,10 @@ function RoleTablePanel({
             ) : null}
           </div>
         </div>
-      </div>
-
-      <div className={tableScrollClassName} ref={tableScrollRef}>
-        <table className={tableClassName} style={{ minWidth: roleTableMinWidth }}>
-          <RoleTableColGroup visibleRoleColumns={visibleRoleColumns} />
-          <thead>
-            <tr>
-              <th className="role-selection-column">
-                <button
-                  className="table-selection-toggle"
-                  type="button"
-                  disabled={pagedRoleKeys.length === 0}
-                  onClick={onPagedRoleSelectionToggle}
-                >
-                  {allPagedRolesSelected ? "取消全选" : "全选"}
-                </button>
-              </th>
-              {visibleRoleColumns.image ? (
-                <RoleSortableHeader
-                  className="role-image-column"
-                  label="头像"
-                  sortKey="image"
-                  sortState={roleSortState}
-                  onSort={onRoleSort}
-                />
-              ) : null}
-              <RoleSortableHeader
-                className="role-name-column"
-                label="角色名称"
-                sortKey="name"
-                sortState={roleSortState}
-                onSort={onRoleSort}
-              />
-              {roleDisplayFields.map((field) =>
-                field.id !== "image" && visibleRoleColumns[field.id] ? (
-                  <RoleSortableHeader
-                    className={getRoleFieldColumnClassName(field.id)}
-                    label={field.label}
-                    key={field.id}
-                    sortKey={field.id}
-                    sortState={roleSortState}
-                    onSort={onRoleSort}
-                  />
-                ) : null,
-              )}
-              <th className="role-actions-column">操作</th>
-            </tr>
-          </thead>
-          <tbody>
-            {pagedRoles.map((record) => {
-              const roleKey = getRoleKey(record);
-              const roleSelected = selectedRoleKeySet.has(roleKey);
-
-              return (
-                <tr key={roleKey}>
-                  <td className="role-selection-column">
-                    <TableSelectionCheckbox
-                      ariaLabel={`选择角色 ${record.title}`}
-                      checked={roleSelected}
-                      onChange={() => onRoleSelectionToggle(roleKey)}
-                    />
-                  </td>
-                  {visibleRoleColumns.image ? (
-                    <td className="role-image-column">
-                      {renderRoleColumnValue("image", record, onImagePreviewOpen)}
-                    </td>
-                  ) : null}
-                  <td className="role-name-column">
-                    <div className="table-main-cell">
-                      <strong>{record.title}</strong>
-                      <span>{record.description}</span>
-                    </div>
-                  </td>
-                  {roleDisplayFields.map((field) =>
-                    field.id !== "image" && visibleRoleColumns[field.id] ? (
-                      <td className={getRoleFieldColumnClassName(field.id)} key={field.id}>
-                        {renderRoleColumnValue(field.id, record)}
-                      </td>
-                    ) : null,
-                  )}
-                  <td className="role-actions-column">
-                    <div className="table-actions">
-                      <button type="button" onClick={() => onOpenRoleDialog("detail", record)}>
-                        查看
-                      </button>
-                      <button type="button" onClick={() => onOpenRoleDialog("edit", record)}>
-                        编辑
-                      </button>
-                      <button className="danger" type="button" onClick={() => onOpenRoleDialog("delete", record)}>
-                        删除
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              );
-            })}
-            {pagedRoles.length === 0 ? (
-              <tr>
-                <td className="table-empty" colSpan={visibleTableColumnCount}>
-                  没有匹配的角色
-                </td>
-              </tr>
-            ) : null}
-          </tbody>
-        </table>
-      </div>
-
-      <div className={tableSummaryScrollClassName} ref={tableSummaryScrollRef}>
-        <table
-          className={`${tableClassName} role-summary-table`}
-          style={{ minWidth: roleTableMinWidth }}
-          aria-label="角色统计"
-        >
-          <RoleTableColGroup visibleRoleColumns={visibleRoleColumns} />
-          <tbody>
-            <tr className="role-summary-row">
-              <td className="role-selection-column" />
-              {visibleRoleColumns.image ? <td className="role-image-column" /> : null}
-              <td className="role-name-column">
-                <span className="role-summary-title">合计</span>
-              </td>
-              {roleDisplayFields.map((field) => {
-                const summaryValue = tableSummaryValueMap.get(field.id);
-
-                return field.id !== "image" && visibleRoleColumns[field.id] ? (
-                  <td className={getRoleFieldColumnClassName(field.id)} key={field.id}>
-                    {summaryValue ? <span className="role-summary-value">{summaryValue}</span> : null}
-                  </td>
-                ) : null;
-              })}
-              <td className="role-actions-column" />
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <div className="table-footer">
+        </>
+      }
+      footer={
+        <>
         <div className="table-footer-meta">
           {selectedRoleCount > 0 ? (
             <div className="table-selected-actions">
@@ -1222,6 +1291,7 @@ function RoleTablePanel({
                   type="button"
                   aria-haspopup="menu"
                   aria-expanded={batchActionMenuOpen}
+                  disabled={isRefreshing}
                   onClick={() => onBatchActionMenuOpenChange((open) => !open)}
                 >
                   操作
@@ -1293,8 +1363,149 @@ function RoleTablePanel({
             下一页
           </button>
         </div>
-      </div>
-    </section>
+        </>
+      }
+    >
+        <div className={tableScrollClassName} ref={tableScrollRef}>
+          <table className={tableClassName} style={{ minWidth: roleTableMinWidth }}>
+            <RoleTableColGroup visibleRoleColumns={visibleRoleColumns} />
+            <thead>
+              <tr>
+                <th className="role-selection-column">
+                  <button
+                    className="table-selection-toggle"
+                    type="button"
+                    disabled={isRefreshing || pagedRoleKeys.length === 0}
+                    onClick={onPagedRoleSelectionToggle}
+                  >
+                    {allPagedRolesSelected ? "取消全选" : "全选"}
+                  </button>
+                </th>
+                {visibleRoleColumns.image ? (
+                  <RoleSortableHeader
+                    className="role-image-column"
+                    label="头像"
+                    sortKey="image"
+                    sortState={roleSortState}
+                    onSort={onRoleSort}
+                  />
+                ) : null}
+                <RoleSortableHeader
+                  className="role-name-column"
+                  label="角色名称"
+                  sortKey="name"
+                  sortState={roleSortState}
+                  onSort={onRoleSort}
+                />
+                {roleDisplayFields.map((field) =>
+                  field.id !== "image" && visibleRoleColumns[field.id] ? (
+                    <RoleSortableHeader
+                      className={getRoleFieldColumnClassName(field.id)}
+                      label={field.label}
+                      key={field.id}
+                      sortKey={field.id}
+                      sortState={roleSortState}
+                      onSort={onRoleSort}
+                    />
+                  ) : null,
+                )}
+                <th className="role-actions-column">操作</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pagedRoles.map((record) => {
+                const roleKey = getRoleKey(record);
+                const roleSelected = selectedRoleKeySet.has(roleKey);
+
+                return (
+                  <tr key={roleKey}>
+                    <td className="role-selection-column">
+                      <TableSelectionCheckbox
+                        ariaLabel={`选择角色 ${record.title}`}
+                        checked={roleSelected}
+                        disabled={isRefreshing}
+                        onChange={() => onRoleSelectionToggle(roleKey)}
+                      />
+                    </td>
+                    {visibleRoleColumns.image ? (
+                      <td className="role-image-column">
+                        {renderRoleColumnValue("image", record, isRefreshing ? undefined : onImagePreviewOpen)}
+                      </td>
+                    ) : null}
+                    <td className="role-name-column">
+                      <div className="table-main-cell">
+                        <strong>{record.title}</strong>
+                        <span>{record.description}</span>
+                      </div>
+                    </td>
+                    {roleDisplayFields.map((field) =>
+                      field.id !== "image" && visibleRoleColumns[field.id] ? (
+                        <td className={getRoleFieldColumnClassName(field.id)} key={field.id}>
+                          {renderRoleColumnValue(field.id, record)}
+                        </td>
+                      ) : null,
+                    )}
+                    <td className="role-actions-column">
+                      <div className="table-actions">
+                        <button type="button" disabled={isRefreshing} onClick={() => onOpenRoleDialog("detail", record)}>
+                          查看
+                        </button>
+                        <button type="button" disabled={isRefreshing} onClick={() => onOpenRoleDialog("edit", record)}>
+                          编辑
+                        </button>
+                        <button
+                          className="danger"
+                          type="button"
+                          disabled={isRefreshing}
+                          onClick={() => onOpenRoleDialog("delete", record)}
+                        >
+                          删除
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+              {pagedRoles.length === 0 ? (
+                <tr>
+                  <td className="table-empty" colSpan={visibleTableColumnCount}>
+                    没有匹配的角色
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
+
+        <div className={tableSummaryScrollClassName} ref={tableSummaryScrollRef}>
+          <table
+            className={`${tableClassName} role-summary-table`}
+            style={{ minWidth: roleTableMinWidth }}
+            aria-label="角色统计"
+          >
+            <RoleTableColGroup visibleRoleColumns={visibleRoleColumns} />
+            <tbody>
+              <tr className="role-summary-row">
+                <td className="role-selection-column" />
+                {visibleRoleColumns.image ? <td className="role-image-column" /> : null}
+                <td className="role-name-column">
+                  <span className="role-summary-title">合计</span>
+                </td>
+                {roleDisplayFields.map((field) => {
+                  const summaryValue = tableSummaryValueMap.get(field.id);
+
+                  return field.id !== "image" && visibleRoleColumns[field.id] ? (
+                    <td className={getRoleFieldColumnClassName(field.id)} key={field.id}>
+                      {summaryValue ? <span className="role-summary-value">{summaryValue}</span> : null}
+                    </td>
+                  ) : null;
+                })}
+                <td className="role-actions-column" />
+              </tr>
+            </tbody>
+          </table>
+        </div>
+    </DataTablePanel>
   );
 }
 
@@ -1307,13 +1518,14 @@ function RoleManagementPage() {
   const [fieldMenuOpen, setFieldMenuOpen] = useState(false);
   const [tableConfigOpen, setTableConfigOpen] = useState(false);
   const [batchActionMenuOpen, setBatchActionMenuOpen] = useState(false);
+  const [roleRefreshing, setRoleRefreshing] = useState(false);
   const [selectedRoleKeys, setSelectedRoleKeys] = useState<string[]>([]);
   const [activeRoleKey, setActiveRoleKey] = useState<string | null>(null);
   const [roleDialogMode, setRoleDialogMode] = useState<RoleDialogMode>(null);
-  const [editForm, setEditForm] = useState<RoleEditForm>(() => createRoleEditForm(moduleRecords.roles[0]));
+  const [editForm, setEditForm] = useState<RoleEditForm>(() => createEmptyRoleForm());
   const [roleActionsPinned, setRoleActionsPinned] = useState(false);
   const [roleSelectionPinned, setRoleSelectionPinned] = useState(false);
-  const [pageSize, setPageSize] = useState(DEFAULT_ROLE_PAGE_SIZE);
+  const [pageSize, setPageSize] = useState(() => readRoleTablePreferences().pageSize);
   const [roleSortState, setRoleSortState] = useState<RoleSortState>(null);
   const [previewImage, setPreviewImage] = useState<RoleImage | null>(null);
   const [imagePreviewState, setImagePreviewState] = useState<RoleImagePreviewState>(
@@ -1321,18 +1533,25 @@ function RoleManagementPage() {
   );
   const [imageDragOrigin, setImageDragOrigin] = useState<RoleImageDragOrigin | null>(null);
   const [visibleRoleColumns, setVisibleRoleColumns] = useState<Record<RoleDisplayField, boolean>>(
-    DEFAULT_VISIBLE_ROLE_COLUMNS,
+    () => readRoleTablePreferences().visibleRoleColumns,
   );
   const [tableDisplayConfig, setTableDisplayConfig] =
-    useState<TableDisplayConfig>(DEFAULT_TABLE_DISPLAY_CONFIG);
+    useState<TableDisplayConfig>(() => readRoleTablePreferences().tableDisplayConfig);
   const fieldMenuRef = useRef<HTMLDivElement>(null);
   const tableConfigRef = useRef<HTMLDivElement>(null);
   const batchActionRef = useRef<HTMLDivElement>(null);
   const tableSummaryScrollRef = useRef<HTMLDivElement>(null);
   const tableScrollRef = useRef<HTMLDivElement>(null);
+  const refreshTimerRef = useRef<number | null>(null);
 
-  const statusOptions = useMemo(() => Array.from(new Set(records.map((record) => record.status))), [records]);
-  const ownerOptions = useMemo(() => Array.from(new Set(records.map((record) => record.owner))), [records]);
+  const statusOptions = useMemo(
+    () => Array.from(new Set([...ROLE_STATUS_OPTIONS, ...records.map((record) => record.status)])),
+    [records],
+  );
+  const ownerOptions = useMemo(
+    () => Array.from(new Set([...ROLE_OWNER_OPTIONS, ...records.map((record) => record.owner)])),
+    [records],
+  );
   const statusFilterOptions = useMemo(
     () => [{ value: "all", label: "全部状态" }, ...statusOptions.map((status) => ({ value: status, label: status }))],
     [statusOptions],
@@ -1463,6 +1682,22 @@ function RoleManagementPage() {
       setBatchActionMenuOpen(false);
     }
   }, [selectedRoleCount]);
+
+  useEffect(() => {
+    saveRoleTablePreferences({
+      pageSize,
+      tableDisplayConfig,
+      visibleRoleColumns,
+    });
+  }, [pageSize, tableDisplayConfig, visibleRoleColumns]);
+
+  useEffect(() => {
+    return () => {
+      if (refreshTimerRef.current !== null) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     const scrollElement = tableScrollRef.current;
@@ -1690,6 +1925,23 @@ function RoleManagementPage() {
     downloadRoleExcelFile(`角色管理-已选${selectedRoles.length}条-${getExportTimestamp()}.xls`, columns, selectedRoles);
   }
 
+  function handleRoleRefresh() {
+    if (roleRefreshing) {
+      return;
+    }
+
+    setFieldMenuOpen(false);
+    setTableConfigOpen(false);
+    setBatchActionMenuOpen(false);
+    setRoleRefreshing(true);
+
+    refreshTimerRef.current = window.setTimeout(() => {
+      setRecords((current) => [...current]);
+      setRoleRefreshing(false);
+      refreshTimerRef.current = null;
+    }, 700);
+  }
+
   function openImagePreview(image: RoleImage) {
     setPreviewImage(image);
     setImagePreviewState(DEFAULT_ROLE_IMAGE_PREVIEW_STATE);
@@ -1758,7 +2010,16 @@ function RoleManagementPage() {
     setImageDragOrigin(null);
   }
 
-  function openRoleDialog(mode: Exclude<RoleDialogMode, null>, record: RoleRecord) {
+  function openRoleCreateDialog() {
+    setFieldMenuOpen(false);
+    setTableConfigOpen(false);
+    setBatchActionMenuOpen(false);
+    setActiveRoleKey(null);
+    setEditForm(createEmptyRoleForm());
+    setRoleDialogMode("create");
+  }
+
+  function openRoleDialog(mode: Exclude<RoleDialogMode, "create" | null>, record: RoleRecord) {
     setActiveRoleKey(getRoleKey(record));
     setRoleDialogMode(mode);
 
@@ -1776,23 +2037,46 @@ function RoleManagementPage() {
     setEditForm((current) => ({ ...current, [key]: value }));
   }
 
-  function handleRoleEditSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleRoleFormSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    const nextTitle = editForm.title.trim();
+    const nextDescription = editForm.description.trim();
+
+    if (!nextTitle || !nextDescription) {
+      return;
+    }
+
+    if (roleDialogMode === "create") {
+      const nextRecord = createRoleRecordFromForm(editForm, records.length);
+
+      setRecords((current) => [nextRecord, ...current]);
+      setSelectedRoleKeys([]);
+      setDraftFilters(DEFAULT_ROLE_FILTERS);
+      setAppliedFilters(DEFAULT_ROLE_FILTERS);
+      setRoleSortState(null);
+      setCurrentPage(1);
+      closeRoleDialog();
+      return;
+    }
 
     if (!activeRole || !activeRoleKey) {
       return;
     }
 
     const memberCount = typeof editForm.memberCount === "number" ? editForm.memberCount : getRoleMemberCount(activeRole);
+    const now = formatRoleDateTime(new Date());
     const nextRecord: RoleRecord = {
       ...activeRole,
-      title: editForm.title.trim() || activeRole.title,
-      description: editForm.description.trim() || activeRole.description,
+      title: nextTitle,
+      description: nextDescription,
       meta: `${memberCount} 位成员`,
       owner: editForm.owner,
+      lastOperator: "当前用户",
       status: editForm.status,
       tone: getRoleToneByStatus(editForm.status),
       updated: "今天",
+      updatedAt: now,
     };
     const nextRoleKey = getRoleKey(nextRecord);
 
@@ -1837,7 +2121,7 @@ function RoleManagementPage() {
   }
 
   return (
-    <SearchTableLayout
+    <SearchTablePage
       className="role-page"
       search={
         <RoleSearchForm
@@ -1863,6 +2147,7 @@ function RoleManagementPage() {
           fieldMenuOpen={fieldMenuOpen}
           fieldMenuRef={fieldMenuRef}
           filteredRoleCount={filteredRoles.length}
+          isRefreshing={roleRefreshing}
           pageSize={pageSize}
           pagedRoleKeys={pagedRoleKeys}
           pagedRoles={pagedRoles}
@@ -1888,10 +2173,12 @@ function RoleManagementPage() {
           onFieldMenuOpenChange={setFieldMenuOpen}
           onImagePreviewOpen={openImagePreview}
           onOpenBatchDeleteDialog={openBatchDeleteDialog}
+          onOpenCreateRoleDialog={openRoleCreateDialog}
           onOpenRoleDialog={openRoleDialog}
           onPageChange={setCurrentPage}
           onPageSizeChange={handlePageSizeChange}
           onPagedRoleSelectionToggle={togglePagedRoleSelection}
+          onRefreshRoles={handleRoleRefresh}
           onRoleColumnToggle={toggleRoleColumn}
           onRoleSelectionToggle={toggleRoleSelection}
           onRoleSort={handleRoleSort}
@@ -1925,11 +2212,15 @@ function RoleManagementPage() {
         </LonModal>
       ) : null}
 
-      {activeRole ? (
+      {roleDialogMode === "create" || (roleDialogMode === "edit" && activeRole) ? (
         <LonDrawer
-          open={roleDialogMode === "edit"}
-          title="编辑"
-          description="调整当前记录的基础信息，保存后会同步更新演示表格。"
+          open={roleDialogMode === "create" || roleDialogMode === "edit"}
+          title={roleDialogMode === "create" ? "新建角色" : "编辑"}
+          description={
+            roleDialogMode === "create"
+              ? "填写角色基础信息，创建后会插入当前演示表格。"
+              : "调整当前记录的基础信息，保存后会同步更新演示表格。"
+          }
           size="large"
           onClose={closeRoleDialog}
           footer={
@@ -1937,15 +2228,16 @@ function RoleManagementPage() {
               <LonButton variant="secondary" onClick={closeRoleDialog}>
                 取消
               </LonButton>
-              <LonButton form="role-edit-form" type="submit">
-                保存
+              <LonButton form="role-form" type="submit">
+                {roleDialogMode === "create" ? "创建" : "保存"}
               </LonButton>
             </>
           }
         >
-          <form className="role-edit-form" id="role-edit-form" onSubmit={handleRoleEditSubmit}>
+          <form className="role-edit-form" id="role-form" onSubmit={handleRoleFormSubmit}>
             <LonInput
               label="角色名称"
+              placeholder="请输入角色名称"
               value={editForm.title}
               required
               onChange={(event) => updateEditForm("title", event.target.value)}
@@ -1974,6 +2266,7 @@ function RoleManagementPage() {
               <textarea
                 value={editForm.description}
                 rows={4}
+                placeholder="请输入角色描述"
                 required
                 onChange={(event) => updateEditForm("description", event.target.value)}
               />
@@ -2108,7 +2401,7 @@ function RoleManagementPage() {
           </div>
         ) : null}
       </LonModal>
-    </SearchTableLayout>
+    </SearchTablePage>
   );
 }
 

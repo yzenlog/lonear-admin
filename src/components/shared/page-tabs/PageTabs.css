@@ -131,6 +131,238 @@
   outline-offset: 2px;
 }
 
+.page-tabs-underline {
+  min-height: 42px;
+  align-items: stretch;
+  gap: 0;
+  padding: 0 22px;
+}
+
+.page-tabs-underline .tab-item {
+  height: 42px;
+  padding: 0 3px;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.page-tabs-underline .tab-item::after {
+  position: absolute;
+  right: 10px;
+  bottom: -1px;
+  left: 10px;
+  height: 2px;
+  border-radius: 999px;
+  background: transparent;
+  content: "";
+  transition: background 0.12s ease;
+}
+
+.page-tabs-underline .tab {
+  height: 42px;
+  padding: 0 9px;
+  border-radius: 0;
+}
+
+.page-tabs-underline .tab-close {
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
+}
+
+.page-tabs-underline .tab-item:hover {
+  border-color: transparent;
+  background: var(--surface-hover);
+}
+
+.page-tabs-underline .tab-item.active {
+  border-color: transparent;
+  background: transparent;
+  color: var(--text);
+  box-shadow: none;
+}
+
+.page-tabs-underline .tab-item.active::after {
+  background: var(--accent);
+}
+
+.page-tabs-underline .tab-item.active .tab svg {
+  color: var(--accent);
+}
+
+.page-tabs-underline .tab-item.active .tab-close {
+  color: var(--text-dim);
+}
+
+.page-tabs-underline .tab-item.active:hover {
+  background: var(--surface-hover);
+}
+
+.page-tabs-chrome {
+  --chrome-tab-curve: 14px;
+  --chrome-tab-hover-bg: color-mix(in srgb, var(--surface-2) 96%, var(--text) 4%);
+  --chrome-close-hover-color: color-mix(in srgb, var(--text-dim) 35%, var(--text) 65%);
+  min-height: 40px;
+  align-items: flex-end;
+  gap: 0;
+  padding: 5px 22px 0;
+  background: var(--surface);
+  backdrop-filter: none;
+}
+
+.page-tabs-chrome .tab-item {
+  --chrome-tab-bg: transparent;
+  z-index: 1;
+  height: 35px;
+  margin-right: 3px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 10px 10px 0 0;
+  background: transparent;
+  box-shadow: none;
+  transition: none;
+}
+
+.page-tabs-chrome .tab-item::before {
+  position: absolute;
+  bottom: 0;
+  left: calc(var(--chrome-tab-curve) * -1);
+  width: var(--chrome-tab-curve);
+  height: var(--chrome-tab-curve);
+  background: radial-gradient(
+    circle at 0 0,
+    transparent 0,
+    transparent var(--chrome-tab-curve),
+    var(--chrome-tab-bg) calc(var(--chrome-tab-curve) + 0.5px)
+  );
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+}
+
+.page-tabs-chrome .tab-item::after {
+  position: absolute;
+  right: calc(var(--chrome-tab-curve) * -1);
+  bottom: 0;
+  width: var(--chrome-tab-curve);
+  height: var(--chrome-tab-curve);
+  background: radial-gradient(
+    circle at 100% 0,
+    transparent 0,
+    transparent var(--chrome-tab-curve),
+    var(--chrome-tab-bg) calc(var(--chrome-tab-curve) + 0.5px)
+  );
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+}
+
+.page-tabs-chrome .tab-item.active::before,
+.page-tabs-chrome .tab-item.active::after {
+  opacity: 1;
+}
+
+.page-tabs-chrome .tab {
+  position: relative;
+  z-index: 1;
+  height: 28px;
+  max-width: 184px;
+  padding: 0 9px 0 8px;
+  border-radius: 999px;
+  transition: background 0.12s ease;
+}
+
+.page-tabs-chrome .tab::before {
+  position: absolute;
+  top: 50%;
+  left: -7px;
+  width: 1px;
+  height: 18px;
+  background: var(--border-strong);
+  content: "";
+  opacity: 0.78;
+  transform: translateY(-50%);
+}
+
+.page-tabs-chrome .tab-item:first-child .tab::before,
+.page-tabs-chrome .tab-item.active .tab::before,
+.page-tabs-chrome .tab-item.active + .tab-item .tab::before,
+.page-tabs-chrome .tab-item:hover .tab::before,
+.page-tabs-chrome .tab-item:hover + .tab-item .tab::before {
+  opacity: 0;
+}
+
+.page-tabs-chrome .tab-item:hover .tab::before,
+.page-tabs-chrome .tab-item:hover + .tab-item .tab::before {
+  transition: opacity 0.18s ease;
+}
+
+.page-tabs-chrome .tab-close {
+  position: relative;
+  z-index: 1;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  transition: none;
+}
+
+.page-tabs-chrome .tab-item:hover {
+  background: transparent;
+  color: var(--text);
+}
+
+.page-tabs-chrome .tab-item:hover:not(.active) {
+  background: transparent;
+  border-radius: 999px;
+}
+
+.page-tabs-chrome .tab-item:hover:not(.active)::before {
+  inset: 2px 4px 3px;
+  width: auto;
+  height: auto;
+  border-radius: 999px;
+  background: var(--chrome-tab-hover-bg);
+  opacity: 1;
+}
+
+.page-tabs-chrome .tab-item:hover:not(.active) .tab {
+  background: transparent;
+}
+
+.page-tabs-chrome .tab-item.active {
+  --chrome-tab-bg: var(--accent-soft-2);
+  z-index: 3;
+  border-color: transparent;
+  background: var(--chrome-tab-bg);
+  color: var(--accent);
+  box-shadow: none;
+}
+
+.page-tabs-chrome .tab-item.active .tab {
+  height: 35px;
+  border-radius: 9px 9px 0 0;
+  font-weight: 650;
+}
+
+.page-tabs-chrome .tab-item.active .tab svg {
+  color: var(--accent);
+}
+
+.page-tabs-chrome .tab-item.active .tab-close {
+  color: var(--accent);
+  opacity: 0.62;
+}
+
+.page-tabs-chrome .tab-item.active:hover {
+  --chrome-tab-bg: var(--accent-soft-2);
+  background: var(--chrome-tab-bg);
+}
+
+.page-tabs-chrome .tab-close:hover {
+  background: transparent;
+  color: var(--chrome-close-hover-color);
+}
+
 .tab-context-menu {
   position: fixed;
   z-index: 1000;
