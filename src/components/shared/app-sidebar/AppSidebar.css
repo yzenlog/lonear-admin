@@ -32,7 +32,10 @@
 .section-toggle,
 .add-btn,
 .menu-group-header,
-.nav-item {
+.nav-item,
+.folded-nav-item,
+.folded-submenu-group-title,
+.folded-submenu-item {
   width: auto;
   border: 0;
   background: transparent;
@@ -44,7 +47,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 6px;
   min-height: 42px;
   margin: 14px 10px 8px;
 }
@@ -254,14 +257,14 @@
   display: flex;
   flex-shrink: 0;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
 }
 
 .sidebar-menu-action-btn {
   position: relative;
   display: grid;
-  width: 28px;
-  height: 28px;
+  width: 23px;
+  height: 23px;
   place-items: center;
   padding: 0;
   border: 0;
@@ -274,11 +277,17 @@
 
 .sidebar-menu-action-btn svg {
   display: block;
+  width: 14px;
+  height: 14px;
 }
 
 .sidebar-menu-action-btn:hover {
   background: transparent;
   color: var(--text);
+}
+
+.sidebar-menu-action-btn.active {
+  color: var(--accent);
 }
 
 .sidebar-menu-action-btn::after {
@@ -311,6 +320,86 @@
   transform: translateY(0);
 }
 
+.sidebar-trapezoid-expand {
+  --sidebar-expand-bg: var(--bg);
+  position: absolute;
+  z-index: 90;
+  top: 50%;
+  right: -1px;
+  display: grid;
+  width: 26px;
+  height: 48px;
+  place-items: center;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-right: 0;
+  border-radius: 7px 0 0 7px;
+  background: var(--sidebar-expand-bg);
+  color: var(--text-dim);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-50%);
+  transition:
+    color 0.12s ease,
+    opacity 0.12s ease;
+}
+
+.app-shell-linear .sidebar-trapezoid-expand {
+  --sidebar-expand-bg: var(--panel-bg);
+}
+
+.sidebar.folded:hover .sidebar-trapezoid-expand,
+.sidebar.folded:focus-within .sidebar-trapezoid-expand {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sidebar-trapezoid-expand svg {
+  position: relative;
+  display: block;
+  width: 14px;
+  height: 14px;
+}
+
+.sidebar-trapezoid-tooltip {
+  position: absolute;
+  top: 50%;
+  left: calc(100% + 8px);
+  z-index: 4;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-4px, -50%);
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+  white-space: nowrap;
+}
+
+.sidebar-trapezoid-expand:hover {
+  color: var(--accent);
+}
+
+.sidebar-trapezoid-expand:hover .sidebar-trapezoid-tooltip,
+.sidebar-trapezoid-expand:focus-visible .sidebar-trapezoid-tooltip {
+  opacity: 1;
+  transform: translate(0, -50%);
+}
+
+.sidebar-trapezoid-expand:focus-visible {
+  outline: 2px solid var(--border-strong);
+  outline-offset: 2px;
+}
+
 .nav-stack {
   display: grid;
   flex: 1;
@@ -331,6 +420,290 @@
   border: 2px solid var(--sidebar-bg);
   border-radius: 8px;
   background: var(--scrollbar-thumb);
+}
+
+.folded-nav-stack {
+  display: grid;
+  flex: 1;
+  gap: 5px;
+  align-content: start;
+  min-height: 0;
+  overflow: visible;
+  padding: 7px 7px 10px;
+}
+
+.folded-nav-entry {
+  position: relative;
+}
+
+.folded-nav-entry::after {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 100%;
+  display: none;
+  width: 10px;
+  content: "";
+}
+
+.folded-nav-entry:hover::after,
+.folded-nav-entry:focus-within::after {
+  display: block;
+}
+
+.folded-nav-item {
+  display: flex;
+  width: 100%;
+  height: 34px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: 7px;
+  color: var(--text-muted);
+  text-align: center;
+  transition:
+    background 0.1s ease,
+    color 0.1s ease;
+}
+
+.folded-nav-item:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.folded-nav-item.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.folded-nav-icon {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  place-items: center;
+  color: var(--text-dim);
+}
+
+.folded-nav-item:hover .folded-nav-icon {
+  color: var(--text-muted);
+}
+
+.folded-nav-item.active .folded-nav-icon {
+  color: var(--accent);
+}
+
+.folded-nav-text-icon {
+  display: grid;
+  width: 20px;
+  height: 20px;
+  place-items: center;
+  border-radius: 6px;
+  background: var(--surface-2);
+  color: currentColor;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.folded-nav-item.active .folded-nav-text-icon {
+  background: var(--panel-bg);
+}
+
+.folded-submenu-popover {
+  position: absolute;
+  top: 0;
+  left: calc(100% + 8px);
+  z-index: 80;
+  width: 208px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--panel-bg);
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(-4px);
+  transition:
+    opacity 0.12s ease,
+    transform 0.12s ease;
+}
+
+.folded-nav-entry:hover .folded-submenu-popover,
+.folded-nav-entry:focus-within .folded-submenu-popover {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.folded-submenu-title {
+  padding: 4px 7px 6px;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 14px;
+}
+
+.folded-submenu-list {
+  display: grid;
+  gap: 2px;
+}
+
+.folded-submenu-group {
+  display: grid;
+  gap: 2px;
+}
+
+.folded-submenu-group-title {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 7px 4px;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 16px;
+}
+
+.folded-submenu-group-title:hover {
+  background: var(--surface-hover);
+  color: var(--text);
+}
+
+.folded-submenu-group-title.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.folded-submenu-group-chevron {
+  flex-shrink: 0;
+  color: currentColor;
+  transition: transform 0.15s ease;
+}
+
+.folded-submenu-group-title.collapsed .folded-submenu-group-chevron {
+  transform: rotate(-90deg);
+}
+
+.folded-submenu-group-icon {
+  display: grid;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  place-items: center;
+  border-radius: 4px;
+  color: var(--text-on-accent);
+  font-size: 8.5px;
+  font-weight: 700;
+}
+
+.folded-submenu-group-name {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folded-submenu-group-items {
+  position: relative;
+  display: grid;
+  max-height: 220px;
+  gap: 2px;
+  opacity: 1;
+  overflow: hidden;
+  transform: translateY(0);
+  transform-origin: top;
+  transition:
+    max-height 0.18s ease,
+    opacity 0.12s ease,
+    transform 0.18s ease;
+}
+
+.folded-submenu-group-items::before {
+  position: absolute;
+  top: 4px;
+  bottom: 6px;
+  left: 13.5px;
+  width: 2px;
+  border-radius: 999px;
+  background: var(--folded-submenu-group-color);
+  content: "";
+}
+
+.folded-submenu-group-items.collapsed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-3px);
+}
+
+.folded-submenu-group-items.collapsed::before {
+  display: none;
+}
+
+.folded-submenu-group-items .folded-submenu-item {
+  width: calc(100% - 20px);
+  gap: 7px;
+  padding-left: 7px;
+  margin-left: 20px;
+}
+
+.folded-submenu-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 7px;
+  border-radius: 7px;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 17px;
+  transition:
+    background 0.1s ease,
+    color 0.1s ease;
+}
+
+.folded-submenu-item:hover,
+.folded-submenu-item.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.folded-submenu-item-icon {
+  display: grid;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  place-items: center;
+  color: currentColor;
+}
+
+.folded-submenu-item-label {
+  min-width: 0;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.folded-submenu-badge {
+  padding: 0 6px;
+  border-radius: 5px;
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+.folded-submenu-item.active .folded-submenu-badge {
+  background: var(--panel-bg);
+  color: var(--accent);
 }
 
 .nav-section {
@@ -375,6 +748,11 @@
   color: var(--text-muted);
 }
 
+.section-label.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
 .section-toggle {
   display: flex;
   min-width: 0;
@@ -391,6 +769,11 @@
   flex-shrink: 0;
   color: var(--text-dim);
   transition: transform 0.15s ease;
+}
+
+.section-label.active .section-chevron,
+.menu-group-header.active .menu-group-chevron {
+  color: var(--accent);
 }
 
 .nav-section.collapsed .section-chevron,
@@ -421,6 +804,10 @@
 .add-btn:hover {
   background: var(--surface-2);
   color: var(--text-muted);
+}
+
+.section-label.active .add-btn {
+  color: var(--accent);
 }
 
 .section-body {
@@ -522,6 +909,15 @@
 .menu-group-header:hover {
   background: var(--surface-hover);
   color: var(--text);
+}
+
+.menu-group-header.active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.menu-group-header.active .menu-group-count {
+  color: var(--accent);
 }
 
 .menu-group-icon {
@@ -704,6 +1100,65 @@
   border-radius: 50%;
   background: var(--green);
   box-shadow: 0 0 0 2px rgba(26, 157, 98, 0.18);
+}
+
+.sidebar.folded .sidebar-title-row {
+  justify-content: center;
+  gap: 4px;
+  margin-right: 6px;
+  margin-left: 6px;
+}
+
+.sidebar.folded,
+.sidebar.folded .sidebar-scroll {
+  overflow: visible;
+}
+
+.sidebar.folded {
+  position: relative;
+  z-index: 70;
+}
+
+.sidebar.folded .workspace-switcher {
+  flex: 0 0 auto;
+}
+
+.sidebar.folded .workspace {
+  justify-content: center;
+  padding: 4px;
+}
+
+.sidebar.folded .ws-name,
+.sidebar.folded .ws-chevron {
+  display: none;
+}
+
+.sidebar.folded .sidebar-menu-actions {
+  flex: 0 0 auto;
+}
+
+.sidebar.folded .workspace-menu-popover {
+  left: 0;
+}
+
+.sidebar.folded .sidebar-footer {
+  justify-content: center;
+  padding: 8px;
+}
+
+.sidebar.folded .sidebar-user {
+  display: none;
+}
+
+.sidebar.folded .footer-menu-btn {
+  display: grid;
+}
+
+.sidebar.folded .user-menu-popover {
+  right: auto;
+  bottom: 8px;
+  left: calc(100% + 8px);
+  width: 180px;
 }
 
 @media (max-width: 860px) {

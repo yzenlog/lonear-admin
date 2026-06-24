@@ -86,8 +86,8 @@ export const menuTreeRecords: MenuRecord[] = [
     children: [
       {
         id: "system-roles",
-        title: "角色管理",
-        description: "维护角色资料、成员绑定和数据权限范围",
+        title: "查询列表",
+        description: "搜索、筛选、分页与批量操作的标准列表范式",
         type: "菜单",
         icon: "Shield",
         path: "/system/roles",

@@ -4,6 +4,7 @@ import {
   Eye,
   EyeOff,
   KeyRound,
+  Languages,
   LoaderCircle,
   LockKeyhole,
   Mail,
@@ -12,6 +13,7 @@ import {
   Sun,
 } from "lucide-react";
 import type { ThemeMode } from "../../config/app";
+import { useLanguage } from "../../i18n";
 import "./LoginPage.css";
 
 export type LoginPageProps = {
@@ -49,6 +51,7 @@ function LoginPage({
   onRecoveryClick,
   onSubmit,
 }: LoginPageProps) {
+  const { locale, t, toggleLocale } = useLanguage();
   const isLoading = status === "loading";
   const hasError = Boolean(error);
 
@@ -56,11 +59,25 @@ function LoginPage({
     <main className="login-page">
       <div className="login-page-actions">
         <button
+          className="login-language-switch"
+          type="button"
+          role="switch"
+          aria-checked={locale === "en-US"}
+          aria-label={locale === "en-US" ? "English interface, click to switch to Chinese" : "中文界面，点击切换到英文"}
+          title={t("语言")}
+          onClick={toggleLocale}
+        >
+          <Languages size={17} strokeWidth={2.1} aria-hidden="true" />
+          <span className="login-language-switch-label" aria-hidden="true">
+            {locale === "en-US" ? "EN" : "CN"}
+          </span>
+        </button>
+        <button
           className={`login-theme-switch login-theme-switch-${themeMode}`}
           type="button"
           role="switch"
           aria-checked={themeMode === "dark"}
-          aria-label={themeMode === "dark" ? "深色模式，点击切换为浅色模式" : "浅色模式，点击切换为深色模式"}
+          aria-label={themeMode === "dark" ? t("深色模式，点击切换为浅色模式") : t("浅色模式，点击切换为深色模式")}
           onClick={onThemeModeToggle}
         >
           <span className="login-theme-switch-icon login-theme-switch-icon-light" aria-hidden="true">
@@ -73,7 +90,7 @@ function LoginPage({
         </button>
       </div>
 
-      <section className="login-card" aria-label="登录表单">
+      <section className="login-card" aria-label={t("登录表单")}>
         <header className="login-header">
           <div className="login-card-top">
             <div className="login-brand">
@@ -82,25 +99,25 @@ function LoginPage({
               </span>
               <span className="login-brand-text">
                 <strong>Lonear Admin</strong>
-                <span>管理后台</span>
+                <span>{t("管理后台")}</span>
               </span>
             </div>
 
             <div className="login-card-badge">
               <KeyRound size={15} strokeWidth={2.2} />
-              <span>管理员登录</span>
+              <span>{t("管理员登录")}</span>
             </div>
           </div>
 
           <div className="login-copy">
-            <h1>登录工作台</h1>
-            <p>使用管理员账号继续进入 Lonear Admin。</p>
+            <h1>{t("登录工作台")}</h1>
+            <p>{t("使用管理员账号继续进入 Lonear Admin。")}</p>
           </div>
         </header>
 
         <form className="login-form" onSubmit={onSubmit} noValidate>
           <div className="login-field">
-            <label htmlFor="login-email">邮箱</label>
+            <label htmlFor="login-email">{t("邮箱")}</label>
             <span className={`login-input ${hasError ? "error" : ""}`}>
               <Mail size={16} strokeWidth={2.1} />
               <input
@@ -117,7 +134,7 @@ function LoginPage({
           </div>
 
           <div className="login-field">
-            <label htmlFor="login-password">密码</label>
+            <label htmlFor="login-password">{t("密码")}</label>
             <span className={`login-input ${hasError ? "error" : ""}`}>
               <LockKeyhole size={16} strokeWidth={2.1} />
               <input
@@ -125,7 +142,7 @@ function LoginPage({
                 value={password}
                 onChange={(event) => onPasswordChange(event.target.value)}
                 type={showPassword ? "text" : "password"}
-                placeholder="输入密码"
+                placeholder={t("输入密码")}
                 autoComplete="current-password"
                 aria-invalid={hasError}
                 aria-describedby="login-message"
@@ -134,7 +151,7 @@ function LoginPage({
                 className="login-input-action"
                 type="button"
                 onClick={onTogglePassword}
-                aria-label={showPassword ? "隐藏密码" : "显示密码"}
+                aria-label={showPassword ? t("隐藏密码") : t("显示密码")}
               >
                 {showPassword ? <EyeOff size={15} strokeWidth={2.1} /> : <Eye size={15} strokeWidth={2.1} />}
               </button>
@@ -148,10 +165,10 @@ function LoginPage({
                 onChange={(event) => onRememberChange(event.target.checked)}
                 type="checkbox"
               />
-              <span>保持登录</span>
+              <span>{t("保持登录")}</span>
             </label>
             <button className="login-link" type="button" onClick={onRecoveryClick}>
-              忘记密码
+              {t("忘记密码")}
             </button>
           </div>
 
@@ -161,18 +178,18 @@ function LoginPage({
             role={hasError ? "alert" : "status"}
             aria-live="polite"
           >
-            {hasError ? error : message}
+            {hasError ? t(error) : t(message)}
           </p>
 
           <button className="login-submit" type="submit" disabled={isLoading}>
             {isLoading ? <LoaderCircle className="spin" size={15} strokeWidth={2.2} /> : <ArrowRight size={15} strokeWidth={2.4} />}
-            {isLoading ? "登录中..." : "登录"}
+            {isLoading ? t("登录中...") : t("登录")}
           </button>
         </form>
 
         <footer className="login-footer-note">
           <ShieldCheck size={14} strokeWidth={2.1} />
-          <span>安全验证后进入工作台</span>
+          <span>{t("安全验证后进入工作台")}</span>
         </footer>
       </section>
     </main>

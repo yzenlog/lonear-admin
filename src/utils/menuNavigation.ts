@@ -156,6 +156,7 @@ function toNavSection(record: MenuApiRecord, getGroupColor: () => string): NavSe
   return {
     addable: quickAddSections.has(record.id),
     groups,
+    icon: record.icon ? resolveMenuIcon(record.icon) : undefined,
     id: record.id,
     items,
     standalone: record.id === "dashboard",

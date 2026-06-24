@@ -48,6 +48,7 @@ export type NavItem = {
 export type NavSection = {
   id: string;
   title: string;
+  icon?: LucideIcon;
   items?: NavItem[];
   groups?: NavGroup[];
   standalone?: boolean;
@@ -74,6 +75,7 @@ export const sections: NavSection[] = [
   {
     id: "dashboard",
     title: "工作台",
+    icon: LayoutDashboard,
     standalone: true,
     items: [
       { id: "dashboard", label: "工作台", icon: LayoutDashboard },
@@ -85,7 +87,7 @@ export const sections: NavSection[] = [
     title: "系统管理",
     addable: true,
     items: [
-      { id: "roles", label: "角色管理", icon: Shield },
+      { id: "roles", label: "查询列表", icon: Shield },
       { id: "permissions", label: "权限管理", icon: Key, badge: 6 },
       { id: "menus", label: "菜单管理", icon: Menu },
       { id: "orgs", label: "部门 / 组织", icon: Building2 },
@@ -159,7 +161,7 @@ export const moduleMeta: Record<ModuleId, ModuleMeta> = {
   dashboard: { title: "工作台", scope: "工作台", icon: LayoutDashboard, action: "刷新数据" },
   componentShowcase: { title: "演示台", scope: "工作台", icon: Activity, action: "查看组件" },
   dataModels: { title: "数据模型", scope: "开发", icon: Database, action: "同步模型" },
-  roles: { title: "角色管理", scope: "系统管理", icon: Shield, action: "新建角色" },
+  roles: { title: "查询列表", scope: "系统管理", icon: Shield, action: "新建角色" },
   permissions: { title: "权限管理", scope: "系统管理", icon: Key, action: "新增权限" },
   menus: { title: "菜单管理", scope: "系统管理", icon: Menu, action: "新增菜单" },
   orgs: { title: "部门 / 组织管理", scope: "系统管理", icon: Building2, action: "新增部门" },

@@ -1166,6 +1166,13 @@ button {
   opacity: 1;
 }
 
+.table-summary-scroll.has-fixed-actions .role-summary-table .role-actions-column::before,
+.table-summary-scroll.has-fixed-actions .role-summary-table .role-actions-column::after,
+.table-summary-scroll.has-fixed-selection .role-summary-table .role-selection-column::before,
+.table-summary-scroll.has-fixed-selection .role-summary-table .role-selection-column::after {
+  opacity: 0;
+}
+
 .role-table th.role-selection-column {
   z-index: 6;
 }
@@ -1965,6 +1972,42 @@ button {
   font-size: 12px;
 }
 
+.progress-showcase-panel {
+  min-width: 0;
+}
+
+.progress-showcase-grid {
+  display: grid;
+  gap: 0;
+}
+
+.progress-showcase-row {
+  display: grid;
+  grid-template-columns: 180px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  min-height: 92px;
+  padding: 14px;
+  border-bottom: 1px solid var(--border);
+}
+
+.progress-showcase-row:last-child {
+  border-bottom: 0;
+}
+
+.progress-state-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 1fr));
+  gap: 14px 18px;
+  min-width: 0;
+}
+
+.progress-state-list.is-circle {
+  grid-template-columns: repeat(3, minmax(92px, 1fr));
+  align-items: center;
+  justify-items: center;
+}
+
 .image-showcase-panel {
   min-width: 0;
 }
@@ -2385,6 +2428,11 @@ button {
     align-items: start;
   }
 
+  .progress-showcase-row {
+    grid-template-columns: 1fr;
+    align-items: start;
+  }
+
   .message-showcase-grid {
     grid-template-columns: 1fr;
     align-items: start;
@@ -2464,6 +2512,14 @@ button {
 
   .form-showcase-actions {
     justify-content: flex-start;
+  }
+
+  .progress-state-list {
+    grid-template-columns: 1fr;
+  }
+
+  .progress-state-list.is-circle {
+    grid-template-columns: repeat(3, minmax(72px, 1fr));
   }
 
   .image-showcase-card {

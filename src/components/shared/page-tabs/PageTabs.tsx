@@ -5,6 +5,7 @@ import { ChevronsRight, CopyX, Layers, RefreshCw, X } from "lucide-react";
 import { moduleMeta } from "../../../config/modules";
 import type { ModuleId } from "../../../config/modules";
 import type { PageTabsStyle } from "../../../config/app";
+import { useLanguage } from "../../../i18n";
 import "./PageTabs.css";
 
 type PageTabsProps = {
@@ -41,6 +42,7 @@ function PageTabs({
   onCloseRight,
   onCloseAll,
 }: PageTabsProps) {
+  const { t } = useLanguage();
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const contextMenuIndex = contextMenu ? tabs.indexOf(contextMenu.id) : -1;
@@ -138,7 +140,7 @@ function PageTabs({
 
   return (
     <>
-      <div className={`tabs page-tabs page-tabs-${styleVariant}`} role="tablist" aria-label="已打开页面">
+      <div className={`tabs page-tabs page-tabs-${styleVariant}`} role="tablist" aria-label={t("已打开页面")}>
         {tabs.map((id) => {
           const meta = moduleMeta[id];
           const Icon = meta.icon;
@@ -159,13 +161,13 @@ function PageTabs({
                 onKeyDown={(event) => handleTabKeyDown(event, id)}
               >
                 <Icon size={13} strokeWidth={2.1} />
-                <span>{meta.title}</span>
+                <span>{t(meta.title)}</span>
               </button>
               {id === "dashboard" ? null : (
                 <button
                   className="tab-close"
                   type="button"
-                  aria-label={`关闭${meta.title}`}
+                  aria-label={`${t("关闭")}${t(meta.title)}`}
                   onClick={() => onClose(id)}
                 >
                   <X size={12} strokeWidth={2.1} />
@@ -182,12 +184,12 @@ function PageTabs({
               className="tab-context-menu"
               ref={menuRef}
               role="menu"
-              aria-label={`${moduleMeta[contextMenu.id].title} 标签操作`}
+              aria-label={`${t(moduleMeta[contextMenu.id].title)} ${t("标签操作")}`}
               style={{ left: contextMenu.x, top: contextMenu.y }}
             >
               <button className="tab-menu-item" type="button" role="menuitem" onClick={() => runMenuAction(onRefresh)}>
                 <RefreshCw size={14} strokeWidth={2.1} />
-                <span>刷新页面</span>
+                <span>{t("刷新页面")}</span>
               </button>
               <button
                 className="tab-menu-item"
@@ -197,7 +199,7 @@ function PageTabs({
                 onClick={() => runMenuAction(onClose)}
               >
                 <X size={14} strokeWidth={2.1} />
-                <span>关闭当前</span>
+                <span>{t("关闭当前")}</span>
               </button>
               <button
                 className="tab-menu-item"
@@ -207,7 +209,7 @@ function PageTabs({
                 onClick={() => runMenuAction(onCloseOthers)}
               >
                 <Layers size={14} strokeWidth={2.1} />
-                <span>关闭其他</span>
+                <span>{t("关闭其他")}</span>
               </button>
               <button
                 className="tab-menu-item"
@@ -217,7 +219,7 @@ function PageTabs({
                 onClick={() => runMenuAction(onCloseRight)}
               >
                 <ChevronsRight size={14} strokeWidth={2.1} />
-                <span>关闭右侧</span>
+                <span>{t("关闭右侧")}</span>
               </button>
               <span className="tab-menu-separator" role="separator" />
               <button
@@ -231,7 +233,7 @@ function PageTabs({
                 }}
               >
                 <CopyX size={14} strokeWidth={2.1} />
-                <span>关闭全部</span>
+                <span>{t("关闭全部")}</span>
               </button>
             </div>,
             document.body,

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { FormEvent, PointerEvent } from "react";
 import {
+  Activity,
   Bell,
   CircleAlert,
   Download,
@@ -28,6 +29,7 @@ import {
   LonModal,
   LonNumberInput,
   LonPopconfirm,
+  LonProgress,
   LonRadioGroup,
   LonSelect,
   LonTag,
@@ -40,6 +42,9 @@ import type {
   LonButtonVisualState,
   LonDrawerPlacement,
   LonNumberInputValue,
+  LonProgressSize,
+  LonProgressTone,
+  LonProgressVariant,
   LonTagTone,
 } from "../../components/ui";
 import PanelHeader from "../../components/shared/panel-header/PanelHeader";
@@ -91,6 +96,14 @@ type ShowcaseTag = {
   selected?: boolean;
   disabled?: boolean;
 };
+type ShowcaseProgress = {
+  label: string;
+  value: number;
+  tone?: LonProgressTone;
+  size?: LonProgressSize;
+  variant?: LonProgressVariant;
+  showValue?: boolean;
+};
 
 const showcaseTagRows: Array<{
   title: string;
@@ -131,6 +144,49 @@ const initialClosableTags: ShowcaseTag[] = [
   { label: "新用户", tone: "green" },
   { label: "重要公告", tone: "amber" },
   { label: "内部可见", tone: "blue" },
+];
+
+const showcaseProgressRows: Array<{
+  title: string;
+  description: string;
+  layout?: "line" | "circle";
+  items: ShowcaseProgress[];
+}> = [
+  {
+    title: "基础进度",
+    description: "用于任务完成度、上传进度和流程推进",
+    items: [
+      { label: "资料完善", value: 32 },
+      { label: "权限同步", value: 68 },
+    ],
+  },
+  {
+    title: "状态进度",
+    description: "用颜色区分成功、预警和异常状态",
+    items: [
+      { label: "上线准备", value: 100, tone: "green" },
+      { label: "容量预警", value: 78, tone: "amber" },
+      { label: "失败重试", value: 18, tone: "red" },
+    ],
+  },
+  {
+    title: "圆形进度",
+    description: "用于仪表盘、卡片摘要和阶段完成度",
+    layout: "circle",
+    items: [
+      { label: "流程完成", value: 72, variant: "circle" },
+      { label: "健康度", value: 88, tone: "green", variant: "circle" },
+      { label: "风险占用", value: 34, tone: "amber", size: "small", variant: "circle" },
+    ],
+  },
+  {
+    title: "细尺寸",
+    description: "适合表格、列表和紧凑型摘要",
+    items: [
+      { label: "审计覆盖", value: 45, tone: "purple", size: "small" },
+      { label: "发布队列", value: 86, tone: "green", size: "small", showValue: false },
+    ],
+  },
 ];
 
 const showcaseImages: ShowcaseImage[] = [
@@ -621,6 +677,33 @@ function ComponentShowcasePage() {
               )}
             </div>
           </article>
+        </div>
+      </section>
+
+      <section className="admin-panel progress-showcase-panel">
+        <PanelHeader icon={Activity} title="Progress 进度条" action="线性 / 圆形" />
+        <div className="progress-showcase-grid">
+          {showcaseProgressRows.map((row) => (
+            <article className="progress-showcase-row" key={row.title}>
+              <div className="button-showcase-meta">
+                <strong>{row.title}</strong>
+                <span>{row.description}</span>
+              </div>
+              <div className={`progress-state-list ${row.layout === "circle" ? "is-circle" : ""}`}>
+                {row.items.map((item) => (
+                  <LonProgress
+                    key={`${row.title}-${item.label}`}
+                    label={item.label}
+                    showValue={item.showValue}
+                    size={item.size}
+                    tone={item.tone}
+                    value={item.value}
+                    variant={item.variant}
+                  />
+                ))}
+              </div>
+            </article>
+          ))}
         </div>
       </section>
 

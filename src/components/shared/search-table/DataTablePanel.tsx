@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useLanguage } from "../../../i18n";
 
 type DataTablePanelProps = {
   children: ReactNode;
@@ -19,6 +20,7 @@ function DataTablePanel({
   summary,
   toolbar,
 }: DataTablePanelProps) {
+  const { t } = useLanguage();
   const panelClassName = ["admin-panel", "table-module", loading ? "is-refreshing" : "", className]
     .filter(Boolean)
     .join(" ");
@@ -33,7 +35,7 @@ function DataTablePanel({
         {loading ? (
           <div className="table-loading-overlay" role="status" aria-live="polite">
             <span className="table-loading-spinner" aria-hidden="true" />
-            <span>{loadingText}</span>
+            <span>{t(loadingText)}</span>
           </div>
         ) : null}
       </div>

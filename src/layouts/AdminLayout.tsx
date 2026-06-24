@@ -1,10 +1,11 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties, FormEvent } from "react";
+import type { CSSProperties, FormEvent, KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 import {
   Bell,
   Check,
   ChevronRight,
   KeyRound,
+  Languages,
   Layers,
   LayoutPanelTop,
   Mail,
@@ -33,6 +34,7 @@ import { getModuleIdFromPathname, getNavKeyForModule } from "../utils/navigation
 import PageTabs from "../components/shared/page-tabs/PageTabs";
 import AppSidebar from "../components/shared/app-sidebar/AppSidebar";
 import { LonButton, LonDrawer, LonInput, LonModal } from "../components/ui";
+import { useLanguage } from "../i18n";
 import "./AdminLayout.css";
 
 type AdminLayoutProps = {
@@ -49,6 +51,16 @@ type TopbarNotification = ManagementRecord & {
   sourceLabel: string;
   unread: boolean;
 };
+
+const DEFAULT_SIDEBAR_WIDTH = 250;
+const FOLDED_SIDEBAR_WIDTH = 70;
+const MIN_SIDEBAR_WIDTH = 220;
+const MAX_SIDEBAR_WIDTH = 360;
+const SIDEBAR_RESIZE_KEYBOARD_STEP = 8;
+
+function clampSidebarWidth(width: number) {
+  return Math.min(MAX_SIDEBAR_WIDTH, Math.max(MIN_SIDEBAR_WIDTH, width));
+}
 
 function getDefaultOpenTabs(activeModule: ModuleId): ModuleId[] {
   return activeModule === "dashboard" ? ["dashboard"] : ["dashboard", activeModule];
@@ -187,10 +199,14 @@ function getRoleLabel(roles?: string[]) {
 function AdminLayout({ currentUser, themeMode, onCurrentUserChange, onThemeModeChange, onLogout }: AdminLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { locale, t, toggleLocale } = useLanguage();
   const activeModule = getModuleIdFromPathname(location.pathname) ?? "dashboard";
   const [menuQuery, setMenuQuery] = useState("");
   const [uiSettings, setUiSettings] = useState<UiSettings>(getInitialUiSettings);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [sidebarFolded, setSidebarFolded] = useState(false);
+  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+  const [sidebarResizing, setSidebarResizing] = useState(false);
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({
     system: false,
     content: false,
@@ -222,6 +238,7 @@ function AdminLayout({ currentUser, themeMode, onCurrentUserChange, onThemeModeC
   const workspaceMenuRef = useRef<HTMLDivElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const notificationMenuRef = useRef<HTMLDivElement>(null);
+  const sidebarResizeRef = useRef<{ startWidth: number; startX: number } | null>(null);
   const activeNavKey = useMemo(() => getNavKeyForModule(activeModule, navSections), [activeModule, navSections]);
   const meta = moduleMeta[activeModule];
   const breadcrumbItems = getBreadcrumbItems(activeModule, meta.scope, meta.title, navSections);
@@ -249,6 +266,9 @@ function AdminLayout({ currentUser, themeMode, onCurrentUserChange, onThemeModeC
     return [...inboxItems, ...noticeItems].slice(0, 6);
   }, []);
   const unreadNotificationCount = notificationItems.filter((item) => item.unread).length;
+  const appShellStyle = {
+    "--sidebar-width": `${sidebarFolded ? FOLDED_SIDEBAR_WIDTH : sidebarWidth}px`,
+  } as CSSProperties;
 
   useEffect(() => {
     let ignore = false;
@@ -408,6 +428,45 @@ function AdminLayout({ currentUser, themeMode, onCurrentUserChange, onThemeModeC
     return () => document.removeEventListener("fullscreenchange", syncFullscreenState);
   }, []);
 
+  useEffect(() => {
+    if (!sidebarResizing) {
+      return;
+    }
+
+    const previousCursor = document.body.style.cursor;
+    const previousUserSelect = document.body.style.userSelect;
+
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+
+    const onPointerMove = (event: PointerEvent) => {
+      const resizeState = sidebarResizeRef.current;
+
+      if (!resizeState) {
+        return;
+      }
+
+      setSidebarWidth(clampSidebarWidth(resizeState.startWidth + event.clientX - resizeState.startX));
+    };
+
+    const stopResizing = () => {
+      sidebarResizeRef.current = null;
+      setSidebarResizing(false);
+    };
+
+    window.addEventListener("pointermove", onPointerMove);
+    window.addEventListener("pointerup", stopResizing);
+    window.addEventListener("pointercancel", stopResizing);
+
+    return () => {
+      document.body.style.cursor = previousCursor;
+      document.body.style.userSelect = previousUserSelect;
+      window.removeEventListener("pointermove", onPointerMove);
+      window.removeEventListener("pointerup", stopResizing);
+      window.removeEventListener("pointercancel", stopResizing);
+    };
+  }, [sidebarResizing]);
+
   function toggleSection(id: string) {
     setCollapsedSections((current) => ({ ...current, [id]: !current[id] }));
   }
@@ -425,6 +484,7 @@ function AdminLayout({ currentUser, themeMode, onCurrentUserChange, onThemeModeC
     setWorkspaceOpen(false);
     setUserMenuOpen(false);
     setNotificationOpen(false);
+    setSidebarFolded(false);
     setNotice("已展开全部菜单");
   }
 
@@ -437,7 +497,58 @@ function AdminLayout({ currentUser, themeMode, onCurrentUserChange, onThemeModeC
     setWorkspaceOpen(false);
     setUserMenuOpen(false);
     setNotificationOpen(false);
+    setSidebarFolded(false);
     setNotice("已聚焦当前菜单");
+  }
+
+  function toggleSidebarFolded() {
+    const nextFolded = !sidebarFolded;
+
+    setMenuQuery("");
+    setSidebarFolded(nextFolded);
+    setWorkspaceOpen(false);
+    setUserMenuOpen(false);
+    setNotificationOpen(false);
+    setNotice(nextFolded ? "菜单已折叠" : "菜单已展开");
+  }
+
+  function handleSidebarResizeStart(event: ReactPointerEvent<HTMLDivElement>) {
+    if (sidebarFolded) {
+      return;
+    }
+
+    event.preventDefault();
+    sidebarResizeRef.current = {
+      startWidth: sidebarWidth,
+      startX: event.clientX,
+    };
+    setSidebarResizing(true);
+  }
+
+  function handleSidebarResizeKeyDown(event: ReactKeyboardEvent<HTMLDivElement>) {
+    if (sidebarFolded) {
+      return;
+    }
+
+    if (event.key === "ArrowLeft") {
+      event.preventDefault();
+      setSidebarWidth((width) => clampSidebarWidth(width - SIDEBAR_RESIZE_KEYBOARD_STEP));
+    }
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault();
+      setSidebarWidth((width) => clampSidebarWidth(width + SIDEBAR_RESIZE_KEYBOARD_STEP));
+    }
+
+    if (event.key === "Home") {
+      event.preventDefault();
+      setSidebarWidth(MIN_SIDEBAR_WIDTH);
+    }
+
+    if (event.key === "End") {
+      event.preventDefault();
+      setSidebarWidth(MAX_SIDEBAR_WIDTH);
+    }
   }
 
   function activateModule(id: ModuleId) {
@@ -537,6 +648,17 @@ function AdminLayout({ currentUser, themeMode, onCurrentUserChange, onThemeModeC
     const nextThemeMode = themeMode === "dark" ? "light" : "dark";
 
     handleThemeModeChange(nextThemeMode);
+  }
+
+  function handleLanguageToggle() {
+    const nextLocale = locale === "zh-CN" ? "en-US" : "zh-CN";
+
+    toggleLocale();
+    setWorkspaceOpen(false);
+    setUserMenuOpen(false);
+    setNotificationOpen(false);
+    setSettingsOpen(false);
+    setNotice(nextLocale === "en-US" ? "已切换为英文界面" : "已切换为中文界面");
   }
 
   function handleSettingsToggle() {
@@ -739,13 +861,19 @@ function AdminLayout({ currentUser, themeMode, onCurrentUserChange, onThemeModeC
   }
 
   return (
-    <div className={`app-shell app-shell-${uiSettings.mainAreaStyle}`}>
+    <div
+      className={`app-shell ${sidebarFolded ? "app-shell-sidebar-folded" : ""} ${
+        sidebarResizing ? "app-shell-resizing" : ""
+      } app-shell-${uiSettings.mainAreaStyle}`}
+      style={appShellStyle}
+    >
       <AppSidebar
         sections={navSections}
         activeNavKey={activeNavKey}
         query={menuQuery}
         workspaceOpen={workspaceOpen}
         userMenuOpen={userMenuOpen}
+        folded={sidebarFolded}
         collapsedSections={collapsedSections}
         collapsedGroups={collapsedGroups}
         currentUser={currentUser}
@@ -771,6 +899,7 @@ function AdminLayout({ currentUser, themeMode, onCurrentUserChange, onThemeModeC
         onLogout={handleLogout}
         onExpandAllMenus={expandAllMenus}
         onFocusActiveMenu={focusActiveMenu}
+        onToggleFolded={toggleSidebarFolded}
         onToggleSection={toggleSection}
         onToggleGroup={toggleGroup}
         onQuickAdd={handleSectionQuickAdd}
@@ -778,21 +907,35 @@ function AdminLayout({ currentUser, themeMode, onCurrentUserChange, onThemeModeC
       />
 
       <main className="main-panel">
+        {!sidebarFolded ? (
+          <div
+            className={`main-resize-handle ${sidebarResizing ? "dragging" : ""}`}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label={t("调整主区宽度")}
+            aria-valuemin={MIN_SIDEBAR_WIDTH}
+            aria-valuemax={MAX_SIDEBAR_WIDTH}
+            aria-valuenow={sidebarWidth}
+            tabIndex={0}
+            onPointerDown={handleSidebarResizeStart}
+            onKeyDown={handleSidebarResizeKeyDown}
+          />
+        ) : null}
         <div className="main-area-frame">
           <header className="topbar">
             <button className="mobile-menu icon-btn" type="button" aria-label="打开菜单">
               <Menu size={17} strokeWidth={2.1} />
             </button>
-            <div className="breadcrumb" aria-label="当前位置">
+            <div className="breadcrumb" aria-label={t("当前位置")}>
               {breadcrumbItems.map((item, index) => (
                 <Fragment key={`${item}-${index}`}>
                   {index > 0 ? <span className="sep">/</span> : null}
-                  <span className={index === breadcrumbItems.length - 1 ? undefined : "crumb-muted"}>{item}</span>
+                  <span className={index === breadcrumbItems.length - 1 ? undefined : "crumb-muted"}>{t(item)}</span>
                 </Fragment>
               ))}
             </div>
             <div className="topbar-actions">
-              {uiSettings.showNotice ? <span className="notice">{notice}</span> : null}
+              {uiSettings.showNotice ? <span className="notice">{t(notice)}</span> : null}
               <div className="notification-wrap" ref={notificationMenuRef}>
                 <button
                   className={`icon-btn notification-trigger ${notificationOpen ? "active" : ""}`}
@@ -876,6 +1019,24 @@ function AdminLayout({ currentUser, themeMode, onCurrentUserChange, onThemeModeC
                 onClick={handleSettingsToggle}
               >
                 <Settings size={17} strokeWidth={2.1} />
+              </button>
+              <button
+                className="language-switch"
+                type="button"
+                role="switch"
+                aria-checked={locale === "en-US"}
+                aria-label={
+                  locale === "en-US"
+                    ? "English interface, click to switch to Chinese"
+                    : "中文界面，点击切换到英文"
+                }
+                title={t("语言")}
+                onClick={handleLanguageToggle}
+              >
+                <Languages className="language-switch-icon" size={17} strokeWidth={2.1} aria-hidden="true" />
+                <span className="language-switch-label" aria-hidden="true">
+                  {locale === "en-US" ? "EN" : "CN"}
+                </span>
               </button>
               <button
                 className={`theme-switch theme-switch-${themeMode}`}

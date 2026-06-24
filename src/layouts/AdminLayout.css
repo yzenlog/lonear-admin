@@ -1,17 +1,38 @@
 .app-shell {
   display: grid;
   height: 100vh;
-  grid-template-columns: 250px minmax(0, 1fr);
+  grid-template-columns: var(--sidebar-width, 250px) minmax(0, 1fr);
   overflow: hidden;
+  transition: grid-template-columns 0.16s ease;
+}
+
+.app-shell-resizing {
+  cursor: col-resize;
+  transition: none;
 }
 
 .main-panel {
+  position: relative;
   display: flex;
   min-width: 0;
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
   background: var(--bg);
+}
+
+.main-resize-handle {
+  position: absolute;
+  z-index: 75;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 9px;
+  border: 0;
+  background: transparent;
+  cursor: col-resize;
+  outline: 0;
+  transform: translateX(-4px);
 }
 
 .main-area-frame {
@@ -62,6 +83,47 @@
   align-items: center;
   gap: 6px;
   margin-left: auto;
+}
+
+.language-switch {
+  position: relative;
+  display: inline-flex;
+  min-width: 46px;
+  height: 30px;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition:
+    background 0.12s ease,
+    color 0.12s ease;
+}
+
+.language-switch:hover {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.language-switch:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.language-switch-icon {
+  color: currentColor;
+}
+
+.language-switch-label {
+  color: currentColor;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
 }
 
 .theme-switch {
@@ -1140,6 +1202,10 @@
 @media (max-width: 860px) {
   .app-shell {
     grid-template-columns: 58px minmax(0, 1fr);
+  }
+
+  .main-resize-handle {
+    display: none;
   }
 
   .topbar {

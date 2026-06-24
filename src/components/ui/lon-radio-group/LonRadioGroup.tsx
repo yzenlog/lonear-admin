@@ -38,23 +38,23 @@ function LonRadioGroup({
   return (
     <fieldset className={`lon-form-field lon-choice-fieldset ${error ? "has-error" : ""}`} aria-describedby={messageId}>
       <legend className="lon-form-label">{label}</legend>
-      <div className={`lon-choice-group ${direction}`}>
+      <div className={`lon-choice-group ${direction}`} role="radiogroup">
         {options.map((option) => (
-          <label className="lon-choice-option lon-radio-option" key={option.value}>
-            <input
-              type="radio"
-              name={groupName}
-              value={option.value}
-              checked={value === option.value}
-              disabled={option.disabled}
-              onChange={() => onValueChange(option.value)}
-            />
+          <button
+            aria-checked={value === option.value}
+            className={`lon-choice-option lon-radio-option ${value === option.value ? "is-checked" : ""}`}
+            disabled={option.disabled}
+            key={option.value}
+            role="radio"
+            type="button"
+            onClick={() => onValueChange(option.value)}
+          >
             <span className="lon-choice-mark" aria-hidden="true" />
             <span className="lon-choice-text">
               <span>{option.label}</span>
               {option.description ? <small>{option.description}</small> : null}
             </span>
-          </label>
+          </button>
         ))}
       </div>
       {error || hint ? (

@@ -38,23 +38,23 @@ function LonCheckboxGroup({
   return (
     <fieldset className={`lon-form-field lon-choice-fieldset ${error ? "has-error" : ""}`} aria-describedby={messageId}>
       <legend className="lon-form-label">{label}</legend>
-      <div className={`lon-choice-group ${direction}`}>
+      <div className={`lon-choice-group ${direction}`} role="group">
         {options.map((option) => (
-          <label className="lon-choice-option lon-checkbox-option" key={option.value}>
-            <input
-              type="checkbox"
-              name={groupName}
-              value={option.value}
-              checked={value.includes(option.value)}
-              disabled={option.disabled}
-              onChange={() => toggleValue(option.value)}
-            />
+          <button
+            aria-checked={value.includes(option.value)}
+            className={`lon-choice-option lon-checkbox-option ${value.includes(option.value) ? "is-checked" : ""}`}
+            disabled={option.disabled}
+            key={option.value}
+            role="checkbox"
+            type="button"
+            onClick={() => toggleValue(option.value)}
+          >
             <span className="lon-choice-mark" aria-hidden="true" />
             <span className="lon-choice-text">
               <span>{option.label}</span>
               {option.description ? <small>{option.description}</small> : null}
             </span>
-          </label>
+          </button>
         ))}
       </div>
       {error || hint ? (

@@ -23,6 +23,13 @@ export { default as LonNumberInput } from "./lon-number-input/LonNumberInput";
 export type { LonNumberInputProps, LonNumberInputValue } from "./lon-number-input/LonNumberInput";
 export { default as LonPopconfirm } from "./lon-popconfirm/LonPopconfirm";
 export type { LonPopconfirmPlacement, LonPopconfirmProps } from "./lon-popconfirm/LonPopconfirm";
+export { default as LonProgress } from "./lon-progress/LonProgress";
+export type {
+  LonProgressProps,
+  LonProgressSize,
+  LonProgressTone,
+  LonProgressVariant,
+} from "./lon-progress/LonProgress";
 export { default as LonRadioGroup } from "./lon-radio-group/LonRadioGroup";
 export type { LonChoiceOption, LonRadioGroupProps } from "./lon-radio-group/LonRadioGroup";
 export { default as LonSelect } from "./lon-select/LonSelect";

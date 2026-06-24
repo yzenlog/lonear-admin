@@ -8,6 +8,8 @@ import {
   LocateFixed,
   LogOut,
   MoreHorizontal,
+  PanelLeftClose,
+  PanelLeftOpen,
   Plus,
   Search,
   Settings,
@@ -15,6 +17,7 @@ import {
 } from "lucide-react";
 import type { CurrentUser } from "../../../api/auth";
 import type { ModuleId, NavGroup, NavItem, NavSection } from "../../../config/modules";
+import { useLanguage } from "../../../i18n";
 import UserAvatar from "../user-avatar/UserAvatar";
 import "./AppSidebar.css";
 
@@ -24,6 +27,7 @@ type AppSidebarProps = {
   query: string;
   workspaceOpen: boolean;
   userMenuOpen: boolean;
+  folded: boolean;
   collapsedSections: Record<string, boolean>;
   collapsedGroups: Record<string, boolean>;
   currentUser: CurrentUser | null;
@@ -39,10 +43,20 @@ type AppSidebarProps = {
   onLogout: () => void;
   onExpandAllMenus: () => void;
   onFocusActiveMenu: () => void;
+  onToggleFolded: () => void;
   onToggleSection: (id: string) => void;
   onToggleGroup: (id: string) => void;
   onQuickAdd: (section: NavSection) => void;
   onActivate: (id: ModuleId) => void;
+};
+
+type FoldedNavItemModel = {
+  active: boolean;
+  icon: NavItem["icon"] | undefined;
+  id: string;
+  label: string;
+  section: NavSection;
+  targetId: ModuleId;
 };
 
 function AppSidebar({
@@ -51,6 +65,7 @@ function AppSidebar({
   query,
   workspaceOpen,
   userMenuOpen,
+  folded,
   collapsedSections,
   collapsedGroups,
   currentUser,
@@ -66,20 +81,23 @@ function AppSidebar({
   onLogout,
   onExpandAllMenus,
   onFocusActiveMenu,
+  onToggleFolded,
   onToggleSection,
   onToggleGroup,
   onQuickAdd,
   onActivate,
 }: AppSidebarProps) {
+  const { t } = useLanguage();
   const normalizedQuery = query.trim().toLowerCase();
   const isFiltering = normalizedQuery.length > 0;
-  const visibleSections = useMemo(() => filterNavSections(sections, normalizedQuery), [sections, normalizedQuery]);
-  const userName = currentUser?.name.trim() || "未登录用户";
-  const userStatus = currentUser?.email?.trim() || "在线";
+  const visibleSections = useMemo(() => filterNavSections(sections, normalizedQuery, t), [sections, normalizedQuery, t]);
+  const foldedSections = useMemo(() => getFoldedNavItems(sections, activeNavKey), [activeNavKey, sections]);
+  const userName = currentUser?.name.trim() || t("未登录用户");
+  const userStatus = currentUser?.email?.trim() || t("在线");
   const userInitials = getUserInitials(userName);
 
   return (
-    <aside className="sidebar" aria-label="主导航">
+    <aside className={`sidebar ${folded ? "folded" : ""}`} aria-label={t("主导航")}>
       <div className="sidebar-scroll">
         <div className="sidebar-header">
           <div className="sidebar-title-row">
@@ -99,92 +117,135 @@ function AppSidebar({
               </button>
 
               {workspaceOpen ? (
-                <div className="workspace-menu-popover" role="menu" aria-label="工作区菜单">
+                <div className="workspace-menu-popover" role="menu" aria-label={t("工作区菜单")}>
                   <button className="active" type="button" role="menuitem" onClick={() => onWorkspaceSelect("Lonear Admin")}>
                     <span className="ws-menu-logo">
                       <img src="/logo.png" alt="" />
                     </span>
                     <span>
                       <strong>Lonear Admin</strong>
-                      <small>当前工作区</small>
+                      <small>{t("当前工作区")}</small>
                     </span>
                     <Check size={14} strokeWidth={2.2} />
                   </button>
                   <button type="button" role="menuitem" onClick={() => onWorkspaceSelect("运营后台")}>
-                    <span className="ws-menu-logo muted">运</span>
+                    <span className="ws-menu-logo muted">{t("运营后台").slice(0, 1).toUpperCase()}</span>
                     <span>
-                      <strong>运营后台</strong>
-                      <small>内容与消息</small>
+                      <strong>{t("运营后台")}</strong>
+                      <small>{t("内容与消息")}</small>
                     </span>
                   </button>
                   <button type="button" role="menuitem" onClick={onWorkspaceManage}>
                     <Plus size={14} strokeWidth={2.2} />
                     <span>
-                      <strong>管理工作区</strong>
-                      <small>切换、创建或配置</small>
+                      <strong>{t("管理工作区")}</strong>
+                      <small>{t("切换、创建或配置")}</small>
                     </span>
                   </button>
                 </div>
               ) : null}
             </div>
 
-            <div className="sidebar-menu-actions" aria-label="菜单快捷操作">
-              <button
-                className="sidebar-menu-action-btn"
-                type="button"
-                aria-label="展开全部菜单"
-                data-tooltip="展开菜单"
-                onClick={onExpandAllMenus}
-              >
-                <ListPlus size={17} strokeWidth={2.2} />
-              </button>
-              <button
-                className="sidebar-menu-action-btn"
-                type="button"
-                aria-label="只展开当前菜单"
-                data-tooltip="聚焦菜单"
-                onClick={onFocusActiveMenu}
-              >
-                <LocateFixed size={17} strokeWidth={2.2} />
-              </button>
-            </div>
+            {!folded ? (
+              <div className="sidebar-menu-actions" aria-label={t("菜单快捷操作")}>
+                <button
+                  className="sidebar-menu-action-btn"
+                  type="button"
+                  aria-label={t("展开全部菜单")}
+                  data-tooltip={t("展开菜单")}
+                  onClick={onExpandAllMenus}
+                >
+                  <ListPlus size={17} strokeWidth={2.2} />
+                </button>
+                <button
+                  className="sidebar-menu-action-btn"
+                  type="button"
+                  aria-label={t("只展开当前菜单")}
+                  data-tooltip={t("聚焦菜单")}
+                  onClick={onFocusActiveMenu}
+                >
+                  <LocateFixed size={17} strokeWidth={2.2} />
+                </button>
+                <button
+                  className="sidebar-menu-action-btn sidebar-fold-toggle"
+                  type="button"
+                  aria-label={t("收起侧边栏")}
+                  aria-pressed={false}
+                  data-tooltip={t("收起菜单")}
+                  onClick={onToggleFolded}
+                >
+                  <PanelLeftClose size={17} strokeWidth={2.2} />
+                </button>
+              </div>
+            ) : null}
           </div>
 
-          <div className="sidebar-search-row">
-            <label className="search-box">
-              <Search size={15} strokeWidth={2.1} />
-              <input
-                ref={searchRef}
-                value={query}
-                onChange={(event) => onQueryChange(event.target.value)}
-                placeholder="搜索菜单..."
-                aria-label="搜索菜单"
-              />
-              <kbd>
-                <Command size={10} strokeWidth={2.4} />K
-              </kbd>
-            </label>
-          </div>
+          {!folded ? (
+            <div className="sidebar-search-row">
+              <label className="search-box">
+                <Search size={15} strokeWidth={2.1} />
+                <input
+                  ref={searchRef}
+                  value={query}
+                  onChange={(event) => onQueryChange(event.target.value)}
+                  placeholder={t("搜索菜单...")}
+                  aria-label={t("搜索菜单")}
+                />
+                <kbd>
+                  <Command size={10} strokeWidth={2.4} />K
+                </kbd>
+              </label>
+            </div>
+          ) : null}
         </div>
 
-        <nav className="nav-stack">
-          {visibleSections.map((section) => (
-            <SidebarSection
-              key={section.id}
-              section={section}
-              activeNavKey={activeNavKey}
-              collapsed={isFiltering ? false : Boolean(collapsedSections[section.id])}
-              collapsedGroups={collapsedGroups}
-              isFiltering={isFiltering}
-              onToggleSection={onToggleSection}
-              onToggleGroup={onToggleGroup}
-              onQuickAdd={onQuickAdd}
-              onActivate={onActivate}
-            />
-          ))}
-          {isFiltering && visibleSections.length === 0 ? <div className="nav-empty">没有匹配的菜单</div> : null}
-        </nav>
+        {folded ? (
+          <nav className="folded-nav-stack" aria-label={t("一级菜单")}>
+            {foldedSections.map((section) => (
+              <FoldedNavItem
+                key={section.id}
+                item={section}
+                activeNavKey={activeNavKey}
+                collapsedGroups={collapsedGroups}
+                onToggleGroup={onToggleGroup}
+                onActivate={onActivate}
+              />
+            ))}
+          </nav>
+        ) : (
+          <nav className="nav-stack">
+            {visibleSections.map((section) => (
+              <SidebarSection
+                key={section.id}
+                section={section}
+                activeNavKey={activeNavKey}
+                collapsed={isFiltering ? false : Boolean(collapsedSections[section.id])}
+                collapsedGroups={collapsedGroups}
+                isFiltering={isFiltering}
+                onToggleSection={onToggleSection}
+                onToggleGroup={onToggleGroup}
+                onQuickAdd={onQuickAdd}
+                onActivate={onActivate}
+              />
+            ))}
+            {isFiltering && visibleSections.length === 0 ? <div className="nav-empty">{t("没有匹配的菜单")}</div> : null}
+          </nav>
+        )}
       </div>
+
+      {folded ? (
+        <button
+          className="sidebar-trapezoid-expand"
+          type="button"
+          aria-label={t("展开侧边栏")}
+          aria-pressed={true}
+          title={t("展开菜单")}
+          onClick={onToggleFolded}
+        >
+          <PanelLeftOpen size={15} strokeWidth={2.2} />
+          <span className="sidebar-trapezoid-tooltip">{t("展开菜单")}</span>
+        </button>
+      ) : null}
 
       <div className="sidebar-footer" ref={userMenuRef}>
         <button className="sidebar-user" type="button" onClick={() => onUserMenuAction("个人资料")}>
@@ -200,7 +261,7 @@ function AppSidebar({
         <button
           className={`footer-menu-btn ${userMenuOpen ? "active" : ""}`}
           type="button"
-          aria-label="打开个人菜单"
+          aria-label={t("打开个人菜单")}
           aria-haspopup="menu"
           aria-expanded={userMenuOpen}
           onClick={onUserMenuToggle}
@@ -209,18 +270,18 @@ function AppSidebar({
         </button>
 
         {userMenuOpen ? (
-          <div className="user-menu-popover" role="menu" aria-label="个人菜单">
+          <div className="user-menu-popover" role="menu" aria-label={t("个人菜单")}>
             <button type="button" role="menuitem" onClick={() => onUserMenuAction("个人资料")}>
               <UserRound size={14} strokeWidth={2.1} />
-              个人资料
+              {t("个人资料")}
             </button>
             <button type="button" role="menuitem" onClick={() => onUserMenuAction("账号设置")}>
               <Settings size={14} strokeWidth={2.1} />
-              账号设置
+              {t("账号设置")}
             </button>
             <button className="danger" type="button" role="menuitem" onClick={onLogout}>
               <LogOut size={14} strokeWidth={2.1} />
-              退出登录
+              {t("退出登录")}
             </button>
           </div>
         ) : null}
@@ -239,24 +300,31 @@ function getUserInitials(name: string) {
   return Array.from(name.replace(/\s+/g, "")).slice(0, 2).join("").toUpperCase() || "U";
 }
 
-function filterNavSections(sections: NavSection[], query: string) {
+function matchesQuery(value: string, query: string, translate: (text: string) => string) {
+  const normalizedValue = value.toLowerCase();
+  const translatedValue = translate(value).toLowerCase();
+
+  return normalizedValue.includes(query) || translatedValue.includes(query);
+}
+
+function filterNavSections(sections: NavSection[], query: string, translate: (text: string) => string) {
   if (!query) {
     return sections;
   }
 
   return sections.reduce<NavSection[]>((matchedSections, section) => {
-    const sectionMatched = section.title.toLowerCase().includes(query);
+    const sectionMatched = matchesQuery(section.title, query, translate);
     const items = sectionMatched
       ? section.items
-      : section.items?.filter((item) => item.label.toLowerCase().includes(query));
+      : section.items?.filter((item) => matchesQuery(item.label, query, translate));
     const groups = sectionMatched
       ? section.groups
       : section.groups
           ?.map((group) => {
-            const groupMatched = group.name.toLowerCase().includes(query);
+            const groupMatched = matchesQuery(group.name, query, translate);
             const groupItems = groupMatched
               ? group.items
-              : group.items.filter((item) => item.label.toLowerCase().includes(query));
+              : group.items.filter((item) => matchesQuery(item.label, query, translate));
 
             if (!groupMatched && groupItems.length === 0) {
               return null;
@@ -272,6 +340,163 @@ function filterNavSections(sections: NavSection[], query: string) {
 
     return matchedSections;
   }, []);
+}
+
+function getActiveNavPath(activeNavKey: string) {
+  const [activeType, activeSectionId, activeGroupId] = activeNavKey.split(":");
+
+  return {
+    groupId: activeType === "group" ? activeGroupId : undefined,
+    sectionId: activeSectionId,
+  };
+}
+
+function getSectionTargetItem(section: NavSection) {
+  return section.items?.[0] ?? section.groups?.find((group) => group.items.length > 0)?.items[0] ?? null;
+}
+
+function getFoldedNavItems(sections: NavSection[], activeNavKey: string): FoldedNavItemModel[] {
+  const activeNavPath = getActiveNavPath(activeNavKey);
+
+  return sections
+    .map((section) => {
+      const targetItem = getSectionTargetItem(section);
+
+      if (!targetItem) {
+        return null;
+      }
+
+      return {
+        active: activeNavPath.sectionId === section.id,
+        icon: section.icon,
+        id: section.id,
+        label: section.title,
+        section,
+        targetId: targetItem.id,
+      };
+    })
+    .filter(
+      (item): item is FoldedNavItemModel => Boolean(item),
+    );
+}
+
+function FoldedNavItem({
+  activeNavKey,
+  collapsedGroups,
+  item,
+  onToggleGroup,
+  onActivate,
+}: {
+  activeNavKey: string;
+  collapsedGroups: Record<string, boolean>;
+  item: FoldedNavItemModel;
+  onToggleGroup: (id: string) => void;
+  onActivate: (id: ModuleId) => void;
+}) {
+  const { t } = useLanguage();
+  const Icon = item.icon;
+  const label = t(item.label);
+  const textIcon = getTextIcon(label);
+  const activeNavPath = getActiveNavPath(activeNavKey);
+
+  return (
+    <div className="folded-nav-entry">
+      <button
+        className={`folded-nav-item ${item.active ? "active" : ""}`}
+        type="button"
+        title={label}
+        aria-current={item.active ? "page" : undefined}
+        onClick={() => onActivate(item.targetId)}
+      >
+        <span className="folded-nav-icon">
+          {Icon ? <Icon size={18} strokeWidth={2.1} /> : <span className="folded-nav-text-icon">{textIcon}</span>}
+        </span>
+      </button>
+      <div className="folded-submenu-popover" role="menu" aria-label={label}>
+        <div className="folded-submenu-title">{label}</div>
+        <div className="folded-submenu-list">
+          {item.section.items?.map((navItem) => (
+            <FoldedSubmenuItem
+              key={`${item.id}-${navItem.id}-${navItem.label}`}
+              active={activeNavKey === `section:${item.id}:${navItem.id}:${navItem.label}`}
+              item={navItem}
+              onActivate={onActivate}
+            />
+          ))}
+          {item.section.groups?.map((group) => {
+            const groupCollapsed = Boolean(collapsedGroups[group.id]);
+            const groupActive = activeNavPath.sectionId === item.id && activeNavPath.groupId === group.id;
+            const groupName = t(group.name);
+
+            return (
+              <div
+                className="folded-submenu-group"
+                key={group.id}
+                style={{ "--folded-submenu-group-color": group.color } as CSSProperties}
+              >
+                <button
+                  className={`folded-submenu-group-title ${groupCollapsed ? "collapsed" : ""} ${
+                    groupCollapsed && groupActive ? "active" : ""
+                  }`}
+                  type="button"
+                  aria-expanded={!groupCollapsed}
+                  onClick={() => onToggleGroup(group.id)}
+                >
+                  <ChevronDown className="folded-submenu-group-chevron" size={11} strokeWidth={2.2} />
+                  <span className="folded-submenu-group-icon" style={{ background: group.color }}>
+                    {groupName.slice(0, 1).toUpperCase() || group.initials}
+                  </span>
+                  <span className="folded-submenu-group-name">{groupName}</span>
+                </button>
+                <div className={`folded-submenu-group-items ${groupCollapsed ? "collapsed" : ""}`}>
+                  {group.items.map((navItem) => (
+                    <FoldedSubmenuItem
+                      key={`${group.id}-${navItem.id}-${navItem.label}`}
+                      active={activeNavKey === `group:${item.id}:${group.id}:${navItem.id}:${navItem.label}`}
+                      item={navItem}
+                      onActivate={onActivate}
+                    />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function getTextIcon(label: string) {
+  return Array.from(label.trim()).slice(0, 1).join("").toUpperCase() || "?";
+}
+
+function FoldedSubmenuItem({
+  active,
+  item,
+  onActivate,
+}: {
+  active: boolean;
+  item: NavItem;
+  onActivate: (id: ModuleId) => void;
+}) {
+  const { t } = useLanguage();
+  const Icon = item.icon;
+
+  return (
+    <button
+      className={`folded-submenu-item ${active ? "active" : ""}`}
+      type="button"
+      role="menuitem"
+      onClick={() => onActivate(item.id)}
+    >
+      <span className="folded-submenu-item-icon">
+        <Icon size={15} strokeWidth={2.1} />
+      </span>
+      <span className="folded-submenu-item-label">{t(item.label)}</span>
+      {item.badge ? <span className="folded-submenu-badge">{item.badge}</span> : null}
+    </button>
+  );
 }
 
 function SidebarSection({
@@ -295,6 +520,10 @@ function SidebarSection({
   onQuickAdd: (section: NavSection) => void;
   onActivate: (id: ModuleId) => void;
 }) {
+  const { t } = useLanguage();
+  const activeNavPath = getActiveNavPath(activeNavKey);
+  const sectionActive = activeNavPath.sectionId === section.id;
+
   if (section.standalone) {
     return (
       <section className="nav-section standalone">
@@ -314,7 +543,7 @@ function SidebarSection({
 
   return (
     <section className={`nav-section ${collapsed ? "collapsed" : ""}`}>
-      <div className="section-label">
+      <div className={`section-label ${collapsed && sectionActive ? "active" : ""}`}>
         <button
           className="section-toggle"
           type="button"
@@ -322,13 +551,13 @@ function SidebarSection({
           onClick={() => onToggleSection(section.id)}
         >
           <ChevronDown className="section-chevron" size={11} strokeWidth={2.2} />
-          <span className="section-title">{section.title}</span>
+          <span className="section-title">{t(section.title)}</span>
         </button>
         {section.addable ? (
           <button
             className="add-btn"
             type="button"
-            aria-label={`新增${section.title}`}
+            aria-label={`${t("新增")}${t(section.title)}`}
             onClick={() => onQuickAdd(section)}
           >
             <Plus size={14} strokeWidth={2.1} />
@@ -377,19 +606,24 @@ function MenuGroup({
   onToggle: () => void;
   onActivate: (id: ModuleId) => void;
 }) {
+  const { t } = useLanguage();
+  const translatedGroupName = t(group.name);
+  const activeNavPath = getActiveNavPath(activeNavKey);
+  const groupActive = activeNavPath.sectionId === sectionId && activeNavPath.groupId === group.id;
+
   return (
     <div className="menu-group" style={{ "--menu-group-color": group.color } as CSSProperties}>
       <button
-        className={`menu-group-header ${collapsed ? "collapsed" : ""}`}
+        className={`menu-group-header ${collapsed ? "collapsed" : ""} ${collapsed && groupActive ? "active" : ""}`}
         type="button"
         aria-expanded={!collapsed}
         onClick={onToggle}
       >
         <ChevronDown className="menu-group-chevron" size={11} strokeWidth={2.2} />
         <span className="menu-group-icon" style={{ background: group.color }}>
-          {group.initials}
+          {translatedGroupName.slice(0, 1).toUpperCase() || group.initials}
         </span>
-        <span className="menu-group-name">{group.name}</span>
+        <span className="menu-group-name">{translatedGroupName}</span>
         <span className="menu-group-count">{group.count}</span>
       </button>
 
@@ -416,6 +650,7 @@ function SidebarItem({
   active: boolean;
   onActivate: (id: ModuleId) => void;
 }) {
+  const { t } = useLanguage();
   const Icon = item.icon;
 
   return (
@@ -423,7 +658,7 @@ function SidebarItem({
       <span className="item-icon">
         <Icon size={17} strokeWidth={2.1} />
       </span>
-      <span className="item-label">{item.label}</span>
+      <span className="item-label">{t(item.label)}</span>
       {item.badge ? <span className="badge">{item.badge}</span> : null}
     </button>
   );
