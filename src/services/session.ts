@@ -194,12 +194,20 @@ export function syncAccentColor(accentColor: AccentColor, themeMode: ThemeMode) 
   rootStyle.setProperty("--text-on-accent", tokens.textOnAccent);
 }
 
-export function syncThemeMode(themeMode: ThemeMode, accentColor: AccentColor = DEFAULT_UI_SETTINGS.accentColor) {
+function getLightThemeColor(mainAreaStyle: MainAreaStyle) {
+  return mainAreaStyle === "linear" ? "#fafafa" : "#ffffff";
+}
+
+export function syncThemeMode(
+  themeMode: ThemeMode,
+  accentColor: AccentColor = DEFAULT_UI_SETTINGS.accentColor,
+  mainAreaStyle: MainAreaStyle = DEFAULT_UI_SETTINGS.mainAreaStyle,
+) {
   if (typeof document === "undefined") {
     return;
   }
 
-  const themeColor = themeMode === "dark" ? "#111318" : "#ffffff";
+  const themeColor = themeMode === "dark" ? "#111318" : getLightThemeColor(mainAreaStyle);
 
   document.documentElement.dataset.theme = themeMode;
   document.documentElement.style.colorScheme = themeMode === "dark" ? "dark" : "light";

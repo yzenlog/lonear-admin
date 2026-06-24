@@ -1,22 +1,15 @@
 import "./UserAvatar.css";
 
 type UserAvatarProps = {
-  alt?: string;
   initials: string;
   color: string;
-  size?: "regular" | "small" | "large";
-  src?: string;
+  size?: "regular" | "small";
 };
 
-function UserAvatar({ alt, initials, color, size = "regular", src }: UserAvatarProps) {
+function UserAvatar({ initials, color, size = "regular" }: UserAvatarProps) {
   return (
-    <span
-      className={["user-avatar", size !== "regular" ? `user-avatar-${size}` : "", src ? "has-image" : ""]
-        .filter(Boolean)
-        .join(" ")}
-      style={{ background: color }}
-    >
-      {src ? <img src={src} alt={alt ?? ""} /> : initials}
+    <span className={`user-avatar ${size === "small" ? "user-avatar-small" : ""}`} style={{ background: color }}>
+      {initials}
     </span>
   );
 }

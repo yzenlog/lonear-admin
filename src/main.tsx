@@ -3,7 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { LonMessageProvider, LonNotificationProvider } from "./components/ui";
-import { registerServiceWorker } from "./pwa";
+import { registerServiceWorker, syncPwaDisplayMode } from "./pwa";
 import "./styles/global.css";
 
 async function enableMocking() {
@@ -31,3 +31,4 @@ void enableMocking().then(() => {
 });
 
 registerServiceWorker();
+syncPwaDisplayMode();

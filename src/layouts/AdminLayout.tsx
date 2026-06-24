@@ -1,6 +1,23 @@
 import { Fragment, useEffect, useMemo, useRef, useState } from "react";
-import type { CSSProperties } from "react";
-import { Bell, Check, ChevronRight, Layers, LayoutPanelTop, Menu, Moon, Palette, Settings, Sun } from "lucide-react";
+import type { CSSProperties, FormEvent } from "react";
+import {
+  Bell,
+  Check,
+  ChevronRight,
+  KeyRound,
+  Layers,
+  LayoutPanelTop,
+  Mail,
+  Maximize2,
+  Menu,
+  Minimize2,
+  Moon,
+  Palette,
+  Settings,
+  ShieldCheck,
+  Sun,
+  UserRound,
+} from "lucide-react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { getCurrentUserMenuTree } from "../api/system/menu";
 import { ACCENT_COLOR_OPTIONS, MAIN_AREA_STYLE_OPTIONS, PAGE_TABS_STYLE_OPTIONS, TAB_STATE_STORAGE_KEY } from "../config/app";
@@ -15,12 +32,13 @@ import { menuTreeToNavSections } from "../utils/menuNavigation";
 import { getModuleIdFromPathname, getNavKeyForModule } from "../utils/navigation";
 import PageTabs from "../components/shared/page-tabs/PageTabs";
 import AppSidebar from "../components/shared/app-sidebar/AppSidebar";
-import { LonDrawer } from "../components/ui";
+import { LonButton, LonDrawer, LonInput, LonModal } from "../components/ui";
 import "./AdminLayout.css";
 
 type AdminLayoutProps = {
   currentUser: CurrentUser | null;
   themeMode: ThemeMode;
+  onCurrentUserChange: (user: CurrentUser) => void;
   onThemeModeChange: (mode: ThemeMode) => void;
   onLogout: () => void;
 };
@@ -141,7 +159,32 @@ function getBreadcrumbItems(moduleId: ModuleId, scope: string, title: string, na
   }, []);
 }
 
-function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: AdminLayoutProps) {
+function getUserInitials(name: string) {
+  const segments = name.trim().split(/\s+/).filter(Boolean);
+
+  if (segments.length >= 2) {
+    return `${segments[0][0]}${segments[1][0]}`.toUpperCase();
+  }
+
+  return Array.from(name.replace(/\s+/g, "")).slice(0, 2).join("").toUpperCase() || "U";
+}
+
+function getRoleLabel(roles?: string[]) {
+  if (!roles || roles.length === 0) {
+    return "默认角色";
+  }
+
+  const roleLabelMap: Record<string, string> = {
+    admin: "管理员",
+    editor: "编辑员",
+    operator: "运营人员",
+    "super-admin": "超级管理员",
+  };
+
+  return roles.map((role) => roleLabelMap[role] ?? role).join("、");
+}
+
+function AdminLayout({ currentUser, themeMode, onCurrentUserChange, onThemeModeChange, onLogout }: AdminLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const activeModule = getModuleIdFromPathname(location.pathname) ?? "dashboard";
@@ -160,7 +203,18 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
   const [notice, setNotice] = useState("工作区已同步");
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [accountSettingsOpen, setAccountSettingsOpen] = useState(false);
+  const [accountName, setAccountName] = useState("");
+  const [accountEmail, setAccountEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [accountSettingsError, setAccountSettingsError] = useState("");
+  const [securityAlertsEnabled, setSecurityAlertsEnabled] = useState(true);
+  const [loginProtectionEnabled, setLoginProtectionEnabled] = useState(true);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const [navSections, setNavSections] = useState<NavSection[]>(defaultSections);
   const [openTabs, setOpenTabs] = useState<ModuleId[]>(() => getInitialOpenTabs(activeModule));
   const [contentRefreshKey, setContentRefreshKey] = useState(0);
@@ -171,6 +225,11 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
   const activeNavKey = useMemo(() => getNavKeyForModule(activeModule, navSections), [activeModule, navSections]);
   const meta = moduleMeta[activeModule];
   const breadcrumbItems = getBreadcrumbItems(activeModule, meta.scope, meta.title, navSections);
+  const profileName = currentUser?.name.trim() || "未登录用户";
+  const profileEmail = currentUser?.email?.trim() || "尚未绑定邮箱";
+  const profileRole = getRoleLabel(currentUser?.roles);
+  const profileId = currentUser?.id ?? "guest-session";
+  const profileInitials = getUserInitials(profileName);
   const notificationItems = useMemo<TopbarNotification[]>(() => {
     const inboxItems = moduleRecords.messages.map((record, index) => ({
       ...record,
@@ -219,8 +278,8 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
   }, [currentUser?.id]);
 
   useEffect(() => {
-    syncThemeMode(themeMode, uiSettings.accentColor);
-  }, [themeMode, uiSettings.accentColor]);
+    syncThemeMode(themeMode, uiSettings.accentColor, uiSettings.mainAreaStyle);
+  }, [themeMode, uiSettings.accentColor, uiSettings.mainAreaStyle]);
 
   useEffect(() => {
     persistUiSettings(uiSettings);
@@ -254,6 +313,15 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
   useEffect(() => {
     setOpenTabs((currentTabs) => normalizeOpenTabs(currentTabs, activeModule));
   }, [activeModule]);
+
+  useEffect(() => {
+    setAccountName(currentUser?.name.trim() ?? "");
+    setAccountEmail(currentUser?.email?.trim() ?? "");
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setAccountSettingsError("");
+  }, [currentUser?.email, currentUser?.id, currentUser?.name]);
 
   useEffect(() => {
     if (!workspaceOpen) {
@@ -329,6 +397,16 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
       window.removeEventListener("keydown", onKeyDown);
     };
   }, [notificationOpen]);
+
+  useEffect(() => {
+    const syncFullscreenState = () => {
+      setIsFullscreen(Boolean(document.fullscreenElement));
+    };
+
+    syncFullscreenState();
+    document.addEventListener("fullscreenchange", syncFullscreenState);
+    return () => document.removeEventListener("fullscreenchange", syncFullscreenState);
+  }, []);
 
   function toggleSection(id: string) {
     setCollapsedSections((current) => ({ ...current, [id]: !current[id] }));
@@ -468,6 +546,26 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
     setNotificationOpen(false);
   }
 
+  async function handleFullscreenToggle() {
+    setWorkspaceOpen(false);
+    setUserMenuOpen(false);
+    setNotificationOpen(false);
+    setSettingsOpen(false);
+
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+        setNotice("已退出全屏");
+        return;
+      }
+
+      await document.documentElement.requestFullscreen();
+      setNotice("已进入全屏");
+    } catch {
+      setNotice("当前浏览器暂不支持全屏切换");
+    }
+  }
+
   function handleTabsPersistenceToggle() {
     const nextTabsPersistent = !uiSettings.tabsPersistent;
 
@@ -533,8 +631,83 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
   }
 
   function handleUserMenuAction(label: string) {
+    if (label === "个人资料") {
+      setProfileOpen(true);
+    }
+
+    if (label === "账号设置") {
+      resetAccountSettingsForm();
+      setAccountSettingsOpen(true);
+    }
+
     setNotice(`${label}已打开`);
     setUserMenuOpen(false);
+  }
+
+  function resetAccountSettingsForm() {
+    setAccountName(currentUser?.name.trim() ?? "");
+    setAccountEmail(currentUser?.email?.trim() ?? "");
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setAccountSettingsError("");
+  }
+
+  function handleAccountSettingsClose() {
+    setAccountSettingsOpen(false);
+    resetAccountSettingsForm();
+  }
+
+  function handleAccountSettingsSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!currentUser) {
+      setAccountSettingsError("当前会话未登录，无法保存账号设置");
+      return;
+    }
+
+    const normalizedName = accountName.trim();
+    const normalizedEmail = accountEmail.trim();
+    const passwordTouched = Boolean(currentPassword || newPassword || confirmPassword);
+
+    if (normalizedName.length < 2) {
+      setAccountSettingsError("昵称至少需要 2 个字符");
+      return;
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      setAccountSettingsError("请输入有效邮箱地址");
+      return;
+    }
+
+    if (passwordTouched) {
+      if (currentPassword.trim().length < 6) {
+        setAccountSettingsError("当前密码至少需要 6 位");
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        setAccountSettingsError("新密码至少需要 6 位");
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        setAccountSettingsError("两次输入的新密码不一致");
+        return;
+      }
+    }
+
+    onCurrentUserChange({
+      ...currentUser,
+      email: normalizedEmail,
+      name: normalizedName,
+    });
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setAccountSettingsError("");
+    setAccountSettingsOpen(false);
+    setNotice(passwordTouched ? "账号资料与密码设置已保存" : "账号资料已保存");
   }
 
   function handleNotificationToggle() {
@@ -559,6 +732,8 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
   function handleLogout() {
     setUserMenuOpen(false);
     setNotificationOpen(false);
+    setProfileOpen(false);
+    setAccountSettingsOpen(false);
     setSettingsOpen(false);
     onLogout();
   }
@@ -684,6 +859,15 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
                   </div>
                 ) : null}
               </div>
+              <button
+                className={`icon-btn fullscreen-trigger ${isFullscreen ? "active" : ""}`}
+                type="button"
+                aria-label={isFullscreen ? "退出全屏" : "进入全屏"}
+                aria-pressed={isFullscreen}
+                onClick={() => void handleFullscreenToggle()}
+              >
+                {isFullscreen ? <Minimize2 size={17} strokeWidth={2.1} /> : <Maximize2 size={17} strokeWidth={2.1} />}
+              </button>
               <button
                 className={`icon-btn settings-trigger ${settingsOpen ? "active" : ""}`}
                 type="button"
@@ -865,6 +1049,214 @@ function AdminLayout({ currentUser, themeMode, onThemeModeChange, onLogout }: Ad
             </section>
           </div>
         </LonDrawer>
+
+        <LonModal
+          open={profileOpen}
+          title="个人资料"
+          description="当前登录账号的基础信息。"
+          size="small"
+          footer={
+            <LonButton type="button" onClick={() => setProfileOpen(false)}>
+              关闭
+            </LonButton>
+          }
+          onClose={() => setProfileOpen(false)}
+        >
+          <div className="profile-modal">
+            <div className="profile-modal-head">
+              <span className="profile-modal-avatar" aria-hidden="true">
+                {profileInitials}
+              </span>
+              <span className="profile-modal-title">
+                <strong>{profileName}</strong>
+                <small>{profileEmail}</small>
+              </span>
+            </div>
+            <dl className="profile-modal-list">
+              <div>
+                <dt>账号 ID</dt>
+                <dd>{profileId}</dd>
+              </div>
+              <div>
+                <dt>当前角色</dt>
+                <dd>{profileRole}</dd>
+              </div>
+              <div>
+                <dt>登录状态</dt>
+                <dd>{currentUser ? "在线" : "未登录"}</dd>
+              </div>
+            </dl>
+          </div>
+        </LonModal>
+
+        <LonModal
+          open={accountSettingsOpen}
+          title="账号设置"
+          description="更新账号资料、界面偏好与登录安全。"
+          size="default"
+          footer={
+            <>
+              <LonButton variant="secondary" type="button" onClick={handleAccountSettingsClose}>
+                取消
+              </LonButton>
+              <LonButton form="account-settings-form" type="submit">
+                保存设置
+              </LonButton>
+            </>
+          }
+          onClose={handleAccountSettingsClose}
+        >
+          <form
+            className="account-settings-modal"
+            id="account-settings-form"
+            noValidate
+            onSubmit={handleAccountSettingsSubmit}
+          >
+            <section className="account-settings-section" aria-labelledby="account-settings-profile-title">
+              <div className="account-settings-section-head">
+                <UserRound size={15} strokeWidth={2.2} aria-hidden="true" />
+                <h3 id="account-settings-profile-title">账号资料</h3>
+              </div>
+              <div className="account-settings-fields">
+                <LonInput
+                  label="昵称"
+                  value={accountName}
+                  leadingIcon={<UserRound size={15} strokeWidth={2.1} />}
+                  placeholder="请输入昵称"
+                  onChange={(event) => {
+                    setAccountName(event.target.value);
+                    setAccountSettingsError("");
+                  }}
+                />
+                <LonInput
+                  label="邮箱"
+                  value={accountEmail}
+                  leadingIcon={<Mail size={15} strokeWidth={2.1} />}
+                  placeholder="请输入邮箱"
+                  type="email"
+                  onChange={(event) => {
+                    setAccountEmail(event.target.value);
+                    setAccountSettingsError("");
+                  }}
+                />
+              </div>
+            </section>
+
+            <section className="account-settings-section" aria-labelledby="account-settings-preference-title">
+              <div className="account-settings-section-head">
+                <Settings size={15} strokeWidth={2.2} aria-hidden="true" />
+                <h3 id="account-settings-preference-title">界面偏好</h3>
+              </div>
+              <button
+                className="account-settings-row"
+                type="button"
+                aria-pressed={uiSettings.tabsPersistent}
+                onClick={handleTabsPersistenceToggle}
+              >
+                <span className="settings-row-copy">
+                  <strong>标签持久化</strong>
+                  <small>下次进入时恢复已打开页面</small>
+                </span>
+                <span className={`settings-toggle ${uiSettings.tabsPersistent ? "active" : ""}`} aria-hidden="true">
+                  <span />
+                </span>
+              </button>
+              <button
+                className="account-settings-row"
+                type="button"
+                aria-pressed={uiSettings.showNotice}
+                onClick={handleNoticeToggle}
+              >
+                <span className="settings-row-copy">
+                  <strong>状态提示</strong>
+                  <small>在顶部显示最近一次操作反馈</small>
+                </span>
+                <span className={`settings-toggle ${uiSettings.showNotice ? "active" : ""}`} aria-hidden="true">
+                  <span />
+                </span>
+              </button>
+            </section>
+
+            <section className="account-settings-section" aria-labelledby="account-settings-security-title">
+              <div className="account-settings-section-head">
+                <ShieldCheck size={15} strokeWidth={2.2} aria-hidden="true" />
+                <h3 id="account-settings-security-title">安全设置</h3>
+              </div>
+              <button
+                className="account-settings-row"
+                type="button"
+                aria-pressed={securityAlertsEnabled}
+                onClick={() => setSecurityAlertsEnabled((enabled) => !enabled)}
+              >
+                <span className="settings-row-copy">
+                  <strong>安全提醒</strong>
+                  <small>异常登录时发送站内提醒</small>
+                </span>
+                <span className={`settings-toggle ${securityAlertsEnabled ? "active" : ""}`} aria-hidden="true">
+                  <span />
+                </span>
+              </button>
+              <button
+                className="account-settings-row"
+                type="button"
+                aria-pressed={loginProtectionEnabled}
+                onClick={() => setLoginProtectionEnabled((enabled) => !enabled)}
+              >
+                <span className="settings-row-copy">
+                  <strong>登录保护</strong>
+                  <small>敏感操作前要求二次确认</small>
+                </span>
+                <span className={`settings-toggle ${loginProtectionEnabled ? "active" : ""}`} aria-hidden="true">
+                  <span />
+                </span>
+              </button>
+              <div className="account-password-grid">
+                <LonInput
+                  label="当前密码"
+                  value={currentPassword}
+                  autoComplete="current-password"
+                  leadingIcon={<KeyRound size={15} strokeWidth={2.1} />}
+                  placeholder="不修改密码可留空"
+                  type="password"
+                  onChange={(event) => {
+                    setCurrentPassword(event.target.value);
+                    setAccountSettingsError("");
+                  }}
+                />
+                <LonInput
+                  label="新密码"
+                  value={newPassword}
+                  autoComplete="new-password"
+                  leadingIcon={<KeyRound size={15} strokeWidth={2.1} />}
+                  placeholder="至少 6 位"
+                  type="password"
+                  onChange={(event) => {
+                    setNewPassword(event.target.value);
+                    setAccountSettingsError("");
+                  }}
+                />
+                <LonInput
+                  label="确认新密码"
+                  value={confirmPassword}
+                  autoComplete="new-password"
+                  leadingIcon={<KeyRound size={15} strokeWidth={2.1} />}
+                  placeholder="再次输入新密码"
+                  type="password"
+                  onChange={(event) => {
+                    setConfirmPassword(event.target.value);
+                    setAccountSettingsError("");
+                  }}
+                />
+              </div>
+            </section>
+
+            {accountSettingsError ? (
+              <div className="account-settings-error" role="alert">
+                {accountSettingsError}
+              </div>
+            ) : null}
+          </form>
+        </LonModal>
       </main>
     </div>
   );

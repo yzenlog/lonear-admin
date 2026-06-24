@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { getCurrentUser, login, logout } from "../api/auth";
+import type { CurrentUser } from "../api/auth";
 import AdminLayout from "../layouts/AdminLayout";
 import LoginPage from "../pages/auth/LoginPage";
 import type { ThemeMode } from "../config/app";
@@ -14,6 +15,7 @@ import {
   getInitialThemeMode,
   getInitialUiSettings,
   persistAuthSession,
+  persistCurrentUser,
   syncThemeMode,
 } from "../services/session";
 import { persistApiTokens } from "../services/apiTokens";
@@ -35,7 +37,9 @@ function AppRoutes() {
   const currentPath = `${location.pathname}${location.search}`;
 
   useEffect(() => {
-    syncThemeMode(themeMode, getInitialUiSettings().accentColor);
+    const uiSettings = getInitialUiSettings();
+
+    syncThemeMode(themeMode, uiSettings.accentColor, uiSettings.mainAreaStyle);
   }, [themeMode]);
 
   useEffect(() => {
@@ -144,6 +148,11 @@ function AppRoutes() {
     }
   }
 
+  function handleCurrentUserChange(user: CurrentUser) {
+    persistCurrentUser(user, rememberSession);
+    setCurrentUser(user);
+  }
+
   const loginPage = (
     <LoginPage
       email={loginEmail}
@@ -180,6 +189,7 @@ function AppRoutes() {
             <AdminLayout
               currentUser={currentUser}
               themeMode={themeMode}
+              onCurrentUserChange={handleCurrentUserChange}
               onThemeModeChange={setThemeMode}
               onLogout={handleLogout}
             />

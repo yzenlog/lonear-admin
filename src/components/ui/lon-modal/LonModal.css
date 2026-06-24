@@ -12,6 +12,7 @@
 
 .lon-modal {
   display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
   width: min(100%, 440px);
   max-height: min(720px, calc(100vh - 128px));
   overflow: hidden;
