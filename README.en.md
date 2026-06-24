@@ -2,7 +2,7 @@
 
 [中文](./README.md) | English
 
-Lonear Admin is an open-source admin dashboard template built with React, Vite, and TypeScript. It includes an authentication page, admin layout, protected routes, navigation, management pages, reusable UI components, local Mock API, and PWA basics. It is designed as a practical frontend starting point for admin panels, CMS dashboards, operation platforms, and internal business tools.
+Lonear Admin is an open-source admin dashboard template built with React, Vite, and TypeScript. Its interface style is inspired by Linear, with a restrained, clean, information-dense, and productivity-focused experience. It includes an authentication page, admin layout, protected routes, navigation, management pages, reusable UI components, local Mock API, and PWA basics. It is designed as a practical frontend starting point for admin panels, CMS dashboards, operation platforms, and internal business tools.
 
 ## Live Demo
 
@@ -20,6 +20,7 @@ The demo uses browser-side local mock data. Login, menu, role, and system manage
 ## Features
 
 - Built with React 18, React Router, Vite, and TypeScript.
+- Linear-inspired interface style with clear hierarchy, lightweight borders, soft shadows, and workspace-oriented information structure.
 - Includes an admin login page, persisted auth state, and basic route protection.
 - Provides common admin modules such as dashboard, system management, content operations, message center, audit center, and developer tools.
 - Includes sample pages for roles, menus, permissions, organizations, dictionaries, articles, banners, files, notices, messages, and operation logs.
