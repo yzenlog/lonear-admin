@@ -8,7 +8,7 @@ import { registerServiceWorker, syncPwaDisplayMode } from "./pwa";
 import "./styles/global.css";
 
 async function enableMocking() {
-  if (!import.meta.env.DEV || import.meta.env.VITE_USE_MOCK !== "true") {
+  if (import.meta.env.VITE_USE_MOCK === "false") {
     return;
   }
 
