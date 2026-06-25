@@ -1085,6 +1085,7 @@
 }
 
 .app-shell-linear {
+  --linear-frame-inset: 6px;
   --linear-scrollbar-thumb: var(--scrollbar-thumb);
   background: var(--sidebar-bg);
 }
@@ -1100,7 +1101,7 @@
 }
 
 .app-shell-linear .main-area-frame {
-  padding: 6px;
+  padding: var(--linear-frame-inset);
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--panel-bg);
@@ -1118,6 +1119,8 @@
 }
 
 .app-shell-linear .admin-content {
+  margin-right: calc(var(--linear-frame-inset) * -1);
+  padding-right: calc(22px + var(--linear-frame-inset));
   background: var(--panel-bg);
   scrollbar-color: transparent transparent;
 }
@@ -1137,9 +1140,12 @@
 }
 
 .app-shell-linear .admin-content::-webkit-scrollbar-thumb {
-  border: 3px solid var(--panel-bg);
+  border: 3px solid transparent;
+  border-right: 0;
+  border-left-width: 6px;
   border-radius: 999px;
   background: transparent;
+  background-clip: content-box;
 }
 
 .app-shell-linear .admin-content:hover::-webkit-scrollbar-thumb,
@@ -1223,6 +1229,10 @@
   .admin-content {
     padding-right: 14px;
     padding-left: 14px;
+  }
+
+  .app-shell-linear .admin-content {
+    padding-right: calc(14px + var(--linear-frame-inset));
   }
 }
 

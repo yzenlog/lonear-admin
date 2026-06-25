@@ -235,7 +235,7 @@ function AppSidebar({
 
       {folded ? (
         <button
-          className="sidebar-trapezoid-expand"
+          className="sidebar-round-expand"
           type="button"
           aria-label={t("展开侧边栏")}
           aria-pressed={true}
@@ -243,7 +243,7 @@ function AppSidebar({
           onClick={onToggleFolded}
         >
           <PanelLeftOpen size={15} strokeWidth={2.2} />
-          <span className="sidebar-trapezoid-tooltip">{t("展开菜单")}</span>
+          <span className="sidebar-round-tooltip">{t("展开菜单")}</span>
         </button>
       ) : null}
 
