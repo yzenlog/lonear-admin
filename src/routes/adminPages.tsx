@@ -16,6 +16,7 @@ import PermissionManagementPage from "../pages/system/PermissionManagementPage";
 import RoleManagementPage from "../pages/system/RoleManagementPage";
 import SystemConfigPage from "../pages/system/SystemConfigPage";
 import WebsiteConfigPage from "../pages/system/WebsiteConfigPage";
+import StandardFormPage from "../pages/ui-style/StandardFormPage";
 
 type AdminPageRouteProps = {
   moduleId: ModuleId;
@@ -24,6 +25,7 @@ type AdminPageRouteProps = {
 const adminPageMap: Record<ModuleId, ComponentType> = {
   dashboard: WorkbenchPage,
   componentShowcase: ComponentShowcasePage,
+  standardForm: StandardFormPage,
   dataModels: DataModelPage,
   roles: RoleManagementPage,
   permissions: PermissionManagementPage,

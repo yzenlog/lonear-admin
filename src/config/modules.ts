@@ -2,6 +2,7 @@ import {
   Activity,
   BookOpen,
   Building2,
+  ClipboardList,
   Database,
   FileText,
   Folder,
@@ -12,6 +13,7 @@ import {
   Mail,
   Megaphone,
   Menu,
+  Palette,
   Settings,
   Shield,
   Tags,
@@ -21,6 +23,7 @@ import type { LucideIcon } from "lucide-react";
 export type ModuleId =
   | "dashboard"
   | "componentShowcase"
+  | "standardForm"
   | "dataModels"
   | "roles"
   | "permissions"
@@ -83,6 +86,12 @@ export const sections: NavSection[] = [
     ],
   },
   {
+    id: "uiStyle",
+    title: "UI 风格",
+    icon: Palette,
+    items: [{ id: "standardForm", label: "标准表单", icon: ClipboardList }],
+  },
+  {
     id: "system",
     title: "系统管理",
     addable: true,
@@ -141,6 +150,7 @@ export const sections: NavSection[] = [
 export const moduleRoutes: Record<ModuleId, string> = {
   dashboard: "/dashboard",
   componentShowcase: "/components/showcase",
+  standardForm: "/ui/standard-form",
   dataModels: "/developer/data-models",
   roles: "/system/roles",
   permissions: "/system/permissions",
@@ -160,6 +170,7 @@ export const moduleRoutes: Record<ModuleId, string> = {
 export const moduleMeta: Record<ModuleId, ModuleMeta> = {
   dashboard: { title: "工作台", scope: "工作台", icon: LayoutDashboard, action: "刷新数据" },
   componentShowcase: { title: "演示台", scope: "工作台", icon: Activity, action: "查看组件" },
+  standardForm: { title: "标准表单", scope: "UI 风格", icon: ClipboardList, action: "提交表单" },
   dataModels: { title: "数据模型", scope: "开发", icon: Database, action: "同步模型" },
   roles: { title: "查询列表", scope: "系统管理", icon: Shield, action: "新建角色" },
   permissions: { title: "权限管理", scope: "系统管理", icon: Key, action: "新增权限" },
