@@ -13,6 +13,7 @@ import {
   Mail,
   Megaphone,
   Menu,
+  MessageSquareText,
   Palette,
   Settings,
   Shield,
@@ -39,6 +40,7 @@ const menuIconMap: Record<string, LucideIcon> = {
   Mail,
   Megaphone,
   Menu,
+  MessageSquareText,
   Palette,
   Settings,
   Shield,
@@ -119,6 +121,7 @@ function toNavItem(record: MenuApiRecord): NavItem | null {
     icon: resolveMenuIcon(record.icon),
     id: moduleId,
     label: record.name,
+    textIcon: moduleId === "chatRoom" ? record.name : undefined,
   };
 }
 

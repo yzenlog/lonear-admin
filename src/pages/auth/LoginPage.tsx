@@ -90,108 +90,121 @@ function LoginPage({
         </button>
       </div>
 
-      <section className="login-card" aria-label={t("登录表单")}>
-        <header className="login-header">
-          <div className="login-card-top">
-            <div className="login-brand">
-              <span className="login-logo" aria-hidden="true">
-                <img src="/logo.png" alt="" />
-              </span>
-              <span className="login-brand-text">
-                <strong>Lonear Admin</strong>
-                <span>{t("管理后台")}</span>
-              </span>
+      <div className="login-shell">
+        <aside className="login-visual-panel" aria-label={t("登录视觉插画")}>
+          <img
+            className="login-visual-image"
+            src="/images/login/admin-login-illustration.png"
+            alt=""
+            aria-hidden="true"
+          />
+        </aside>
+
+        <section className="login-card" aria-label={t("登录表单")}>
+          <header className="login-header">
+            <div className="login-card-top">
+              <div className="login-brand">
+                <span className="login-logo" aria-hidden="true">
+                  <img src="/logo.png" alt="" />
+                </span>
+                <span className="login-brand-text">
+                  <strong>Lonear Admin</strong>
+                  <span>{t("管理后台")}</span>
+                </span>
+              </div>
+
+              <div className="login-card-badge">
+                <KeyRound size={15} strokeWidth={2.2} />
+                <span>{t("管理员登录")}</span>
+              </div>
             </div>
 
-            <div className="login-card-badge">
-              <KeyRound size={15} strokeWidth={2.2} />
-              <span>{t("管理员登录")}</span>
+            <div className="login-copy">
+              <h1>{t("登录工作台")}</h1>
+              <p>{t("使用管理员账号继续进入 Lonear Admin。")}</p>
             </div>
-          </div>
+          </header>
 
-          <div className="login-copy">
-            <h1>{t("登录工作台")}</h1>
-            <p>{t("使用管理员账号继续进入 Lonear Admin。")}</p>
-          </div>
-        </header>
+          <div className="login-auth-panel">
+            <form className="login-form" onSubmit={onSubmit} noValidate>
+              <div className="login-field">
+                <label htmlFor="login-email">{t("邮箱")}</label>
+                <span className={`login-input ${hasError ? "error" : ""}`}>
+                  <Mail size={16} strokeWidth={2.1} />
+                  <input
+                    id="login-email"
+                    value={email}
+                    onChange={(event) => onEmailChange(event.target.value)}
+                    type="email"
+                    placeholder="admin@acme.local"
+                    autoComplete="username"
+                    aria-invalid={hasError}
+                    aria-describedby="login-message"
+                  />
+                </span>
+              </div>
 
-        <form className="login-form" onSubmit={onSubmit} noValidate>
-          <div className="login-field">
-            <label htmlFor="login-email">{t("邮箱")}</label>
-            <span className={`login-input ${hasError ? "error" : ""}`}>
-              <Mail size={16} strokeWidth={2.1} />
-              <input
-                id="login-email"
-                value={email}
-                onChange={(event) => onEmailChange(event.target.value)}
-                type="email"
-                placeholder="admin@acme.local"
-                autoComplete="username"
-                aria-invalid={hasError}
-                aria-describedby="login-message"
-              />
-            </span>
-          </div>
+              <div className="login-field">
+                <label htmlFor="login-password">{t("密码")}</label>
+                <span className={`login-input ${hasError ? "error" : ""}`}>
+                  <LockKeyhole size={16} strokeWidth={2.1} />
+                  <input
+                    id="login-password"
+                    value={password}
+                    onChange={(event) => onPasswordChange(event.target.value)}
+                    type={showPassword ? "text" : "password"}
+                    placeholder={t("输入密码")}
+                    autoComplete="current-password"
+                    aria-invalid={hasError}
+                    aria-describedby="login-message"
+                  />
+                  <button
+                    className="login-input-action"
+                    type="button"
+                    onClick={onTogglePassword}
+                    aria-label={showPassword ? t("隐藏密码") : t("显示密码")}
+                  >
+                    {showPassword ? <EyeOff size={15} strokeWidth={2.1} /> : <Eye size={15} strokeWidth={2.1} />}
+                  </button>
+                </span>
+              </div>
 
-          <div className="login-field">
-            <label htmlFor="login-password">{t("密码")}</label>
-            <span className={`login-input ${hasError ? "error" : ""}`}>
-              <LockKeyhole size={16} strokeWidth={2.1} />
-              <input
-                id="login-password"
-                value={password}
-                onChange={(event) => onPasswordChange(event.target.value)}
-                type={showPassword ? "text" : "password"}
-                placeholder={t("输入密码")}
-                autoComplete="current-password"
-                aria-invalid={hasError}
-                aria-describedby="login-message"
-              />
-              <button
-                className="login-input-action"
-                type="button"
-                onClick={onTogglePassword}
-                aria-label={showPassword ? t("隐藏密码") : t("显示密码")}
+              <div className="login-options">
+                <label className="login-check">
+                  <input
+                    checked={rememberSession}
+                    onChange={(event) => onRememberChange(event.target.checked)}
+                    type="checkbox"
+                  />
+                  <span>{t("保持登录")}</span>
+                </label>
+                <button className="login-link" type="button" onClick={onRecoveryClick}>
+                  {t("忘记密码")}
+                </button>
+              </div>
+
+              <p
+                className={`login-message ${hasError ? "error" : ""}`}
+                id="login-message"
+                role={hasError ? "alert" : "status"}
+                aria-live="polite"
               >
-                {showPassword ? <EyeOff size={15} strokeWidth={2.1} /> : <Eye size={15} strokeWidth={2.1} />}
+                {hasError ? t(error) : t(message)}
+              </p>
+
+              <button className="login-submit" type="submit" disabled={isLoading}>
+                {isLoading ? <LoaderCircle className="spin" size={15} strokeWidth={2.2} /> : <ArrowRight size={15} strokeWidth={2.4} />}
+                {isLoading ? t("登录中...") : t("登录")}
               </button>
-            </span>
+            </form>
+
+            <footer className="login-footer-note">
+              <ShieldCheck size={14} strokeWidth={2.1} />
+              <span>{t("安全验证后进入工作台")}</span>
+            </footer>
           </div>
-
-          <div className="login-options">
-            <label className="login-check">
-              <input
-                checked={rememberSession}
-                onChange={(event) => onRememberChange(event.target.checked)}
-                type="checkbox"
-              />
-              <span>{t("保持登录")}</span>
-            </label>
-            <button className="login-link" type="button" onClick={onRecoveryClick}>
-              {t("忘记密码")}
-            </button>
-          </div>
-
-          <p
-            className={`login-message ${hasError ? "error" : ""}`}
-            id="login-message"
-            role={hasError ? "alert" : "status"}
-            aria-live="polite"
-          >
-            {hasError ? t(error) : t(message)}
-          </p>
-
-          <button className="login-submit" type="submit" disabled={isLoading}>
-            {isLoading ? <LoaderCircle className="spin" size={15} strokeWidth={2.2} /> : <ArrowRight size={15} strokeWidth={2.4} />}
-            {isLoading ? t("登录中...") : t("登录")}
-          </button>
-        </form>
-
-        <footer className="login-footer-note">
-          <ShieldCheck size={14} strokeWidth={2.1} />
-          <span>{t("安全验证后进入工作台")}</span>
-        </footer>
-      </section>
+        </section>
+      </div>
     </main>
   );
 }

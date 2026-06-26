@@ -482,6 +482,7 @@ function FoldedSubmenuItem({
 }) {
   const { t } = useLanguage();
   const Icon = item.icon;
+  const textIcon = item.textIcon ? getTextIcon(t(item.textIcon)) : "";
 
   return (
     <button
@@ -490,8 +491,8 @@ function FoldedSubmenuItem({
       role="menuitem"
       onClick={() => onActivate(item.id)}
     >
-      <span className="folded-submenu-item-icon">
-        <Icon size={15} strokeWidth={2.1} />
+      <span className={`folded-submenu-item-icon ${textIcon ? "text-icon" : ""}`}>
+        {textIcon ? textIcon : <Icon size={15} strokeWidth={2.1} />}
       </span>
       <span className="folded-submenu-item-label">{t(item.label)}</span>
       {item.badge ? <span className="folded-submenu-badge">{item.badge}</span> : null}
@@ -652,11 +653,12 @@ function SidebarItem({
 }) {
   const { t } = useLanguage();
   const Icon = item.icon;
+  const textIcon = item.textIcon ? getTextIcon(t(item.textIcon)) : "";
 
   return (
     <button className={`nav-item ${active ? "active" : ""}`} type="button" onClick={() => onActivate(item.id)}>
-      <span className="item-icon">
-        <Icon size={17} strokeWidth={2.1} />
+      <span className={`item-icon ${textIcon ? "text-icon" : ""}`}>
+        {textIcon ? textIcon : <Icon size={17} strokeWidth={2.1} />}
       </span>
       <span className="item-label">{t(item.label)}</span>
       {item.badge ? <span className="badge">{item.badge}</span> : null}

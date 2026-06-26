@@ -4,23 +4,12 @@
     {
       "label": "pnpm: dev",
       "type": "shell",
-      "command": "pnpm",
-      "args": ["dev", "--", "--port", "5173"],
-      "isBackground": true,
+      "command": "node",
+      "args": ["scripts/ensure-vite-dev.mjs"],
       "options": {
         "cwd": "${workspaceFolder}"
       },
-      "problemMatcher": {
-        "owner": "vite",
-        "pattern": {
-          "regexp": "^$"
-        },
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": "^\\s*VITE v.*ready in.*$",
-          "endsPattern": "^\\s*➜\\s+Local:\\s+http://127\\.0\\.0\\.1:5173/\\s*$"
-        }
-      },
+      "problemMatcher": [],
       "presentation": {
         "reveal": "always",
         "panel": "dedicated",

@@ -13,6 +13,7 @@ import {
   Mail,
   Megaphone,
   Menu,
+  MessageSquareText,
   Palette,
   Settings,
   Shield,
@@ -23,6 +24,7 @@ import type { LucideIcon } from "lucide-react";
 export type ModuleId =
   | "dashboard"
   | "componentShowcase"
+  | "chatRoom"
   | "standardForm"
   | "dataModels"
   | "roles"
@@ -46,6 +48,7 @@ export type NavItem = {
   label: string;
   icon: LucideIcon;
   badge?: number;
+  textIcon?: string;
 };
 
 export type NavSection = {
@@ -82,7 +85,15 @@ export const sections: NavSection[] = [
     standalone: true,
     items: [
       { id: "dashboard", label: "工作台", icon: LayoutDashboard },
-      { id: "componentShowcase", label: "演示台", icon: Activity },
+    ],
+  },
+  {
+    id: "showcase",
+    title: "演示台",
+    icon: Activity,
+    items: [
+      { id: "componentShowcase", label: "组件展示", icon: Activity },
+      { id: "chatRoom", label: "聊天室", icon: MessageSquareText, textIcon: "聊天室" },
     ],
   },
   {
@@ -117,11 +128,6 @@ export const sections: NavSection[] = [
     ],
   },
   {
-    id: "development",
-    title: "开发",
-    items: [{ id: "dataModels", label: "数据模型", icon: Database }],
-  },
-  {
     id: "content",
     title: "内容运营",
     addable: true,
@@ -140,16 +146,12 @@ export const sections: NavSection[] = [
       { id: "messages", label: "站内信", icon: Mail, badge: 9 },
     ],
   },
-  {
-    id: "audit",
-    title: "审计中心",
-    items: [{ id: "operationLogs", label: "操作日志", icon: FileText }],
-  },
 ];
 
 export const moduleRoutes: Record<ModuleId, string> = {
   dashboard: "/dashboard",
   componentShowcase: "/components/showcase",
+  chatRoom: "/components/chat-room",
   standardForm: "/ui/standard-form",
   dataModels: "/developer/data-models",
   roles: "/system/roles",
@@ -169,7 +171,8 @@ export const moduleRoutes: Record<ModuleId, string> = {
 
 export const moduleMeta: Record<ModuleId, ModuleMeta> = {
   dashboard: { title: "工作台", scope: "工作台", icon: LayoutDashboard, action: "刷新数据" },
-  componentShowcase: { title: "演示台", scope: "工作台", icon: Activity, action: "查看组件" },
+  componentShowcase: { title: "组件展示", scope: "演示台", icon: Activity, action: "查看组件" },
+  chatRoom: { title: "聊天室", scope: "演示台", icon: MessageSquareText, action: "进入聊天" },
   standardForm: { title: "标准表单", scope: "UI 风格", icon: ClipboardList, action: "提交表单" },
   dataModels: { title: "数据模型", scope: "开发", icon: Database, action: "同步模型" },
   roles: { title: "查询列表", scope: "系统管理", icon: Shield, action: "新建角色" },

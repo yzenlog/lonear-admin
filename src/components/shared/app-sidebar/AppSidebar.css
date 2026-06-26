@@ -682,6 +682,14 @@
   color: currentColor;
 }
 
+.folded-submenu-item-icon.text-icon {
+  border-radius: 5px;
+  background: var(--surface-2);
+  font-size: 10px;
+  font-weight: 760;
+  line-height: 1;
+}
+
 .folded-submenu-item-label {
   min-width: 0;
   flex: 1;
@@ -863,6 +871,14 @@
   flex-shrink: 0;
   place-items: center;
   color: var(--text-dim);
+}
+
+.item-icon.text-icon {
+  border-radius: 5px;
+  background: var(--surface-2);
+  font-size: 10.5px;
+  font-weight: 760;
+  line-height: 1;
 }
 
 .nav-item:hover .item-icon {

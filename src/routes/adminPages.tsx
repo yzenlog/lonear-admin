@@ -7,6 +7,7 @@ import FileManagementPage from "../pages/content/FileManagementPage";
 import DataModelPage from "../pages/development/DataModelPage";
 import WorkbenchPage from "../pages/dashboard/WorkbenchPage";
 import MessageInboxPage from "../pages/message/MessageInboxPage";
+import ChatRoomPage from "../pages/showcase/ChatRoomPage";
 import NoticeManagementPage from "../pages/message/NoticeManagementPage";
 import ComponentShowcasePage from "../pages/showcase/ComponentShowcasePage";
 import DictionaryManagementPage from "../pages/system/DictionaryManagementPage";
@@ -25,6 +26,7 @@ type AdminPageRouteProps = {
 const adminPageMap: Record<ModuleId, ComponentType> = {
   dashboard: WorkbenchPage,
   componentShowcase: ComponentShowcasePage,
+  chatRoom: ChatRoomPage,
   standardForm: StandardFormPage,
   dataModels: DataModelPage,
   roles: RoleManagementPage,
